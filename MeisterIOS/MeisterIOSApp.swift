@@ -1,13 +1,14 @@
 import SwiftUI
+import MeradOSDesign2
 
 @main
 struct MeisterIOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .tint(Color.MeradOS.brand400)
+                .tint(Color.meradBrandPrimary)
                 .meradDarkMode()
-                .background(Color.MeradOS.bg.ignoresSafeArea())
+                .background(Color.meradBg.ignoresSafeArea())
         }
     }
 }

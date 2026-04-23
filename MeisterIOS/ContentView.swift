@@ -1,4 +1,5 @@
 import SwiftUI
+import MeradOSDesign2
 
 struct ContentView: View {
     var body: some View {
@@ -14,7 +15,7 @@ struct ContentView: View {
             DiagnosticsView()
                 .tabItem { Label("Diagnostics", systemImage: "waveform.path.ecg") }
         }
-        .toolbarBackground(Color.MeradOS.surface, for: .tabBar)
+        .toolbarBackground(Color.meradSurface, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
     }
 }

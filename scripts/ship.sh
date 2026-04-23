@@ -24,7 +24,7 @@ xcodegen generate | tail -2
 echo "══ 2/6  Archiving"
 rm -rf build
 xcodebuild \
-    -project MeisterIOS.xcodeproj \
+    -project Meister.xcodeproj \
     -scheme MeisterIOS \
     -configuration Release \
     -destination "generic/platform=iOS" \

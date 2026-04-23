@@ -13,6 +13,8 @@ options:
 packages:
   MeisterKit:
     path: Packages/MeisterKit
+  MeradOSDesign2:
+    path: ../meradOS/meradOS-Design2
 
 settings:
   base:
@@ -23,8 +25,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GENERATE_INFOPLIST_FILE: YES
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "11"
 
 targets:
   # iPhone + iPad (adaptive SwiftUI) + Mac Catalyst
@@ -68,16 +70,13 @@ targets:
         DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
     dependencies:
       - target: MeisterWidget
+      - package: MeradOSDesign2
 
-  # Native macOS app — adds AddressBook maintenance (filesystem-level)
+  # Native macOS app — standalone, shells out to bash-meister + native Swift modules
   MeisterMacOS:
     type: application
     platform: macOS
     sources:
-      - path: MeisterIOS
-        excludes:
-          - "Info.plist"
-          - "Intents/**"
       - path: MeisterMacOS
     info:
       path: MeisterMacOS/Info.plist
@@ -92,6 +91,7 @@ targets:
           - de
     settings:
       base:
+        PRODUCT_NAME: Meister
         PRODUCT_BUNDLE_IDENTIFIER: com.merados.meister.macos
         SDKROOT: macosx
         MACOSX_DEPLOYMENT_TARGET: "14.0"
