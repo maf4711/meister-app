@@ -1,57 +1,145 @@
-# Meister for iPhone
+# Meister
 
-On-device iOS maintenance app — photo dedup, contact cleanup, calendar archive,
-storage dashboard. Zero upload, zero account, 100% local.
+Local maintenance for your Apple devices — photo dedup, contact cleanup, storage insights,
+and (new) macOS AddressBook repair. **Zero upload, zero account, 100% local.**
 
-## Build
+Three targets from one codebase:
+- **iOS + iPadOS** — iPhone & iPad app with adaptive SwiftUI
+- **macOS** — native Mac app with filesystem-level features iOS can't offer
+- **CLI** — `meister` command-line tool, installable via Homebrew
+
+## Install
+
+### Mac + iPhone + iPad app
 
 ```bash
 brew install xcodegen      # one-time
-xcodegen                    # produces MeisterIOS.xcodeproj
-open MeisterIOS.xcodeproj
+xcodegen                    # produces Meister.xcodeproj
+open Meister.xcodeproj
 ```
 
-Set your signing team in Xcode, then **Run** on device or simulator (iOS 17+).
+Targets:
+- `MeisterIOS` — runs on iPhone, iPad, and Mac (via Catalyst or "Designed for iPad")
+- `MeisterMacOS` — native macOS app (adds AddressBook Cleanup)
+- `MeisterWidget` — Home/Lock Screen widget
+
+### Command-line tool
+
+```bash
+# From source:
+cd cli
+swift build -c release
+cp .build/release/meister /usr/local/bin/
+
+# Or via Homebrew (once tapped):
+brew tap merados/meister
+brew install meister
+```
+
+## CLI usage
+
+```bash
+# Scan AddressBook for bloat + sync state
+meister contacts scan
+
+# Machine-readable output
+meister contacts scan --json
+
+# Detailed info for one source (UUID prefix is enough)
+meister contacts inspect C5B29763
+
+# Export all contacts to a vCard (safety backup)
+meister contacts export ~/Desktop/contacts.vcf
+
+# Full cleanup: quit Contacts, kill contactsd, trash the largest bloated source
+meister contacts cleanup
+meister contacts cleanup --source C5B29763 --yes
+```
+
+All destructive steps show a preview and ask for confirmation unless `--yes` is passed.
+Nothing is deleted with `rm` — everything moves to `~/.Trash/` with a timestamp so you
+have a 30-day rollback window.
 
 ## Feature map
 
-| Area | Module | What it does |
-|---|---|---|
-| Photos | `PhotoScanner` | Fetches library metadata, no iCloud downloads |
-|  | `DuplicateDetector` | pHash-based near-duplicate clustering |
-|  | `ScreenshotDetector` | Screenshots + screen recordings (stock app) |
-|  | `BlurDetector` | Laplacian variance over thumbnails |
-|  | `LargeMediaFinder` | Top-N / >100 MB filter |
-| Contacts | `PhoneNormalizer` | E.164 normalization (DE default, overrideable) |
-|  | `FuzzyMatcher` | Jaccard + Levenshtein name similarity |
-|  | `ContactDeduplicator` | 3-way union-find dedup (phone / email / name) |
-|  | `ContactBackup` | vCard export to Documents/backups |
-|  | `ContactScanner.merge` | Best-quality winner, phones/emails moved, losers deleted |
-| Calendar | `CalendarScanner` | Old events + empty calendars + completed reminders |
-| Storage | `StorageReader` | Device free/total + app cache size |
-| Diagnostics | `HardwareInfo` | Device/OS/thermal/battery |
-|  | `NetworkMonitor` | Path status + Cloudflare speed test |
-| Widget | `MeisterStorageWidget` | Home Screen + Lock Screen gauge |
-| Siri | `CleanPhotosIntent` | "Hey Siri, clean my photos in Meister" |
+| Area | Module | Platforms | What it does |
+|---|---|---|---|
+| AddressBook | `AddressBookScanner` | macOS, CLI | Scans `~/Library/Application Support/AddressBook/Sources/` for size, account, last sync event |
+|  | `AddressBookCleanup` | macOS, CLI | Safe source removal via Trash, kills contactsd, preserves Apple-ID sign-in |
+|  | `SyncStateInspector` | macOS, CLI | Reads `MobileMeAccounts` to report iCloud Contacts sync on/off |
+|  | `ContactExporter` | macOS, CLI | vCard dump of every contact via `CNContactStore` |
+| Photos | `PhotoScanner` | iOS | Fetches library metadata, no iCloud downloads |
+|  | `DuplicateDetector` | iOS | pHash-based near-duplicate clustering |
+|  | `ScreenshotDetector` | iOS | Screenshots + screen recordings (stock app) |
+|  | `BlurDetector` | iOS | Laplacian variance over thumbnails |
+|  | `LargeMediaFinder` | iOS | Top-N / >100 MB filter |
+| Contacts | `PhoneNormalizer` | iOS, macOS | E.164 normalization (DE default, overrideable) |
+|  | `FuzzyMatcher` | iOS, macOS | Jaccard + Levenshtein name similarity |
+|  | `ContactDeduplicator` | iOS, macOS | 3-way union-find dedup (phone / email / name) |
+|  | `ContactBackup` | iOS, macOS | vCard export to Documents/backups |
+|  | `ContactScanner.merge` | iOS, macOS | Best-quality winner, phones/emails moved, losers deleted |
+| Calendar | `CalendarScanner` | iOS, macOS | Old events + empty calendars + completed reminders |
+| Storage | `StorageReader` | iOS, macOS | Device free/total + app cache size |
+| Diagnostics | `HardwareInfo` | iOS, macOS | Device/OS/thermal/battery |
+|  | `NetworkMonitor` | iOS, macOS | Path status + Cloudflare speed test |
+| Widget | `MeisterStorageWidget` | iOS | Home Screen + Lock Screen gauge |
+| Siri | `CleanPhotosIntent` | iOS | "Hey Siri, clean my photos in Meister" |
+
+## Why a macOS version?
+
+Because iOS can't touch the system-level bloat that accumulates in
+`~/Library/Application Support/AddressBook/`. A corrupted iCloud Contacts sync
+can grow that folder to 2+ GB of orphan photos, ACHANGE-History, and divergent
+source UUIDs. The macOS target includes an **AddressBook Cleanup** feature built
+around real-world recovery from exactly that scenario — see
+[`docs/contacts-troubleshooting.md`](docs/contacts-troubleshooting.md) for the
+original incident report and the diagnostic commands.
+
+## Repository layout
+
+```
+meister/
+├── Meister.xcodeproj            (generated by xcodegen)
+├── project.yml                  (XcodeGen source of truth)
+├── MeisterIOS/                  (iPhone + iPad + Catalyst app)
+├── MeisterMacOS/                (native macOS app, AddressBook Cleanup UI)
+├── MeisterWidget/               (iOS widget extension)
+├── MeisterTests/                (iOS unit tests)
+├── cli/                         (Swift Package — CLI + shared MeisterKit lib)
+│   ├── Package.swift
+│   ├── Sources/
+│   │   ├── MeisterKit/          (shared macOS engine — AddressBook, Shell, SyncStateInspector)
+│   │   └── meister/             (ArgumentParser entry point)
+│   └── Tests/MeisterKitTests/
+├── Formula/meister.rb           (Homebrew formula)
+├── docs/                        (markdown docs incl. troubleshooting report)
+├── fixtures/                    (test images)
+├── scripts/                     (build/deploy shell + python scripts)
+├── ExportOptions.plist
+└── README.md
+```
 
 ## Design principles
 
 - **Backup before destruction.** Every delete path has a backup or uses
   iOS's "Recently Deleted" — never silent destruction.
+- **Trash, not rm.** On macOS every move goes to `~/.Trash/` with a timestamp.
 - **Quality-score wins merges.** For contacts we keep the most complete
   record and transplant phone/email from duplicates before deleting them.
 - **No ML upload.** pHash + Core Image + Vision (when added) run locally.
 - **iCloud-aware.** Uses `PHPhotoLibrary.performChanges` so deletes sync
   to iCloud Photos and respect the user's choice there.
+- **Never sign out the user's Apple ID.** Cleanup works with the account
+  logged in; it only touches the local source files.
 
-## What's intentionally not here (iOS sandbox)
+## What's intentionally not here
 
 - No "RAM booster" (iOS manages memory; the buttons in other apps are theater).
-- No system cache cleanup (not accessible from a regular app).
+- No system cache cleanup on iOS (not accessible from a regular app).
 - No battery cycle count (private API, App Store rejection).
 - No access to other apps' data.
 
-## Next up (Post-MVP)
+## Next up
 
 - **Vision-based similarity**: cluster by feature-print for truly similar (not just pHash-close) images.
 - **Video compression**: AVFoundation export session, HEVC, preserves metadata.
@@ -59,3 +147,4 @@ Set your signing team in Xcode, then **Run** on device or simulator (iOS 17+).
 - **Shortcuts**: `Clean Screenshots`, `Backup Contacts`, `Free Up Space` intents.
 - **Gamification**: streaks for daily cleanup.
 - **Undo**: 30-day trash for contact deletes.
+- **macOS storage module**: GUI over `meister storage` once CLI ships.
