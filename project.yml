@@ -10,6 +10,10 @@ options:
     - de
     - Base
 
+packages:
+  MeisterKit:
+    path: Packages/MeisterKit
+
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -92,6 +96,8 @@ targets:
         SDKROOT: macosx
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         ENABLE_HARDENED_RUNTIME: YES
+    dependencies:
+      - package: MeisterKit
 
   MeisterWidget:
     type: app-extension

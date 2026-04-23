@@ -1,150 +1,162 @@
 # Meister
 
-Local maintenance for your Apple devices — photo dedup, contact cleanup, storage insights,
-and (new) macOS AddressBook repair. **Zero upload, zero account, 100% local.**
+One tool, three platforms, one experience.
 
-Three targets from one codebase:
-- **iOS + iPadOS** — iPhone & iPad app with adaptive SwiftUI
-- **macOS** — native Mac app with filesystem-level features iOS can't offer
-- **CLI** — `meister` command-line tool, installable via Homebrew
+- **Terminal** (`meister`) — the canonical CLI. Bash, battle-tested, v5.6.
+  Lives at [`maf4711/homebrew-meister`](https://github.com/maf4711/homebrew-meister).
+- **macOS** (`Meister.app`) — SwiftUI GUI that shells out to the bash CLI, plus native Swift features for tasks where a shell can't help (AddressBook cleanup, Contact dedup).
+- **iOS + iPadOS** (`Meister` on iPhone/iPad) — universal SwiftUI app. Implements the subset of CLI features that iOS' sandbox allows via native APIs.
+
+**The bash CLI is the foundation.** The apps adapt it per platform instead of duplicating the logic.
+
+## Architecture
+
+```
+     ┌─────────────────────────────────────────────────────────┐
+     │  bash-meister  (maf4711/homebrew-meister)  ◄── source   │
+     │  Shell scripts, maintenance, heal, disk, net, hardware  │
+     └──────────┬──────────────────────────────────┬───────────┘
+                │                                  │
+          shell-out                        read-only reference
+                │                                  │
+     ┌──────────▼──────────┐            ┌─────────▼──────────┐
+     │   Meister for Mac   │            │  Meister for iOS   │
+     │  SwiftUI + MeisterBash           │  SwiftUI + native  │
+     │  + native AddressBook            │  APIs only         │
+     └─────────────────────┘            └────────────────────┘
+```
+
+## Platform feature matrix
+
+Legend: ✅ fully available · 🟡 partial (sandbox) · ❌ not applicable · `shell` = shells out to bash `meister` · `swift` = native reimplementation
+
+| bash-CLI module | Terminal | macOS app | iOS/iPad app |
+|---|---|---|---|
+| Maintenance `-a` / `-H` | ✅ | ✅ `shell` | 🟡 `swift` (readonly dashboard) |
+| Auto-Heal `heal` | ✅ | ✅ `shell` | ❌ |
+| Disk analyzer `disk` | ✅ | ✅ `shell` | 🟡 `swift` (app storage only) |
+| Free RAM `free` | ✅ | ✅ `shell` | ❌ |
+| Startup items `startup` | ✅ | ✅ `shell` | ❌ |
+| Wi-Fi diagnostics `wifi` | ✅ | ✅ `shell` | 🟡 `swift` (NEHotspotNetwork) |
+| Ports `ports` | ✅ | ✅ `shell` | ❌ |
+| DNS leak `dns` | ✅ | ✅ `shell` | 🟡 `swift` |
+| SSL certs `certs` | ✅ | ✅ `shell` | ✅ `swift` (URLSession) |
+| Network top `ntop` / `sniff` / `top` | ✅ | ✅ `shell` (live tail) | ❌ |
+| Battery `battery` | ✅ | ✅ `shell` | ✅ `swift` (UIDevice) |
+| Thermal `thermal` | ✅ | ✅ `shell` | 🟡 `swift` |
+| Dotfiles `push` | ✅ | ✅ `shell` | ❌ |
+| Simulator fix `simfix` | ✅ | ✅ `shell` | ❌ |
+| AddressBook cleanup ⭐ | ❌ (not in bash yet) | ✅ `swift` (CNContactStore) | ❌ (no filesystem) |
+| Contact dedup ⭐ | ❌ | ✅ `swift` | ✅ `swift` |
+| Photo dedup ⭐ | ❌ | 🟡 `swift` (later) | ✅ `swift` |
+
+⭐ = Swift-native features, not part of the bash CLI. Added because the platform framework is strictly better than a shell for the task.
 
 ## Install
 
-### Mac + iPhone + iPad app
+### Terminal (bash CLI)
 
 ```bash
-brew install xcodegen      # one-time
-xcodegen                    # produces Meister.xcodeproj
-open Meister.xcodeproj
-```
-
-Targets:
-- `MeisterIOS` — runs on iPhone, iPad, and Mac (via Catalyst or "Designed for iPad")
-- `MeisterMacOS` — native macOS app (adds AddressBook Cleanup)
-- `MeisterWidget` — Home/Lock Screen widget
-
-### Command-line tool
-
-```bash
-# From source:
-cd cli
-swift build -c release
-cp .build/release/meister /usr/local/bin/
-
-# Or via Homebrew (once tapped):
-brew tap merados/meister
+brew tap maf4711/meister
 brew install meister
+meister -H     # health dashboard
+meister disk   # disk analyzer
 ```
 
-## CLI usage
+Full command list: `meister --help`.
+
+### macOS GUI
+
+The macOS app **requires** the bash CLI as backend:
 
 ```bash
-# Scan AddressBook for bloat + sync state
-meister contacts scan
-
-# Machine-readable output
-meister contacts scan --json
-
-# Detailed info for one source (UUID prefix is enough)
-meister contacts inspect C5B29763
-
-# Export all contacts to a vCard (safety backup)
-meister contacts export ~/Desktop/contacts.vcf
-
-# Full cleanup: quit Contacts, kill contactsd, trash the largest bloated source
-meister contacts cleanup
-meister contacts cleanup --source C5B29763 --yes
+brew tap maf4711/meister
+brew install meister
+brew install --cask merados/meister/meister-mac   # (once released)
 ```
 
-All destructive steps show a preview and ask for confirmation unless `--yes` is passed.
-Nothing is deleted with `rm` — everything moves to `~/.Trash/` with a timestamp so you
-have a 30-day rollback window.
+Or build locally:
 
-## Feature map
+```bash
+brew install xcodegen
+xcodegen
+open Meister.xcodeproj    # select MeisterMacOS scheme, run
+```
 
-| Area | Module | Platforms | What it does |
-|---|---|---|---|
-| AddressBook | `AddressBookScanner` | macOS, CLI | Scans `~/Library/Application Support/AddressBook/Sources/` for size, account, last sync event |
-|  | `AddressBookCleanup` | macOS, CLI | Safe source removal via Trash, kills contactsd, preserves Apple-ID sign-in |
-|  | `SyncStateInspector` | macOS, CLI | Reads `MobileMeAccounts` to report iCloud Contacts sync on/off |
-|  | `ContactExporter` | macOS, CLI | vCard dump of every contact via `CNContactStore` |
-| Photos | `PhotoScanner` | iOS | Fetches library metadata, no iCloud downloads |
-|  | `DuplicateDetector` | iOS | pHash-based near-duplicate clustering |
-|  | `ScreenshotDetector` | iOS | Screenshots + screen recordings (stock app) |
-|  | `BlurDetector` | iOS | Laplacian variance over thumbnails |
-|  | `LargeMediaFinder` | iOS | Top-N / >100 MB filter |
-| Contacts | `PhoneNormalizer` | iOS, macOS | E.164 normalization (DE default, overrideable) |
-|  | `FuzzyMatcher` | iOS, macOS | Jaccard + Levenshtein name similarity |
-|  | `ContactDeduplicator` | iOS, macOS | 3-way union-find dedup (phone / email / name) |
-|  | `ContactBackup` | iOS, macOS | vCard export to Documents/backups |
-|  | `ContactScanner.merge` | iOS, macOS | Best-quality winner, phones/emails moved, losers deleted |
-| Calendar | `CalendarScanner` | iOS, macOS | Old events + empty calendars + completed reminders |
-| Storage | `StorageReader` | iOS, macOS | Device free/total + app cache size |
-| Diagnostics | `HardwareInfo` | iOS, macOS | Device/OS/thermal/battery |
-|  | `NetworkMonitor` | iOS, macOS | Path status + Cloudflare speed test |
-| Widget | `MeisterStorageWidget` | iOS | Home Screen + Lock Screen gauge |
-| Siri | `CleanPhotosIntent` | iOS | "Hey Siri, clean my photos in Meister" |
+If the bash CLI is missing when the macOS app runs, the app shows an inline install prompt per module.
 
-## Why a macOS version?
+### iOS + iPad
 
-Because iOS can't touch the system-level bloat that accumulates in
-`~/Library/Application Support/AddressBook/`. A corrupted iCloud Contacts sync
-can grow that folder to 2+ GB of orphan photos, ACHANGE-History, and divergent
-source UUIDs. The macOS target includes an **AddressBook Cleanup** feature built
-around real-world recovery from exactly that scenario — see
-[`docs/contacts-troubleshooting.md`](docs/contacts-troubleshooting.md) for the
-original incident report and the diagnostic commands.
+```bash
+brew install xcodegen
+xcodegen
+open Meister.xcodeproj    # select MeisterIOS scheme, run on device/simulator
+```
+
+The iOS target ships with `TARGETED_DEVICE_FAMILY: "1,2"` (iPhone + iPad) and Mac Catalyst enabled for optional Mac sideloading.
 
 ## Repository layout
 
 ```
 meister/
-├── Meister.xcodeproj            (generated by xcodegen)
-├── project.yml                  (XcodeGen source of truth)
-├── MeisterIOS/                  (iPhone + iPad + Catalyst app)
-├── MeisterMacOS/                (native macOS app, AddressBook Cleanup UI)
-├── MeisterWidget/               (iOS widget extension)
-├── MeisterTests/                (iOS unit tests)
-├── cli/                         (Swift Package — CLI + shared MeisterKit lib)
-│   ├── Package.swift
-│   ├── Sources/
-│   │   ├── MeisterKit/          (shared macOS engine — AddressBook, Shell, SyncStateInspector)
-│   │   └── meister/             (ArgumentParser entry point)
-│   └── Tests/MeisterKitTests/
-├── Formula/meister.rb           (Homebrew formula)
-├── docs/                        (markdown docs incl. troubleshooting report)
-├── fixtures/                    (test images)
-├── scripts/                     (build/deploy shell + python scripts)
-├── ExportOptions.plist
-└── README.md
+├── Meister.xcodeproj              generated by xcodegen
+├── project.yml                    XcodeGen source of truth
+├── MeisterIOS/                    iPhone + iPad + Catalyst target
+├── MeisterMacOS/                  native macOS target (shell-out + AddressBook)
+│   ├── MeisterMacOSApp.swift
+│   ├── MacRootView.swift
+│   ├── BashModule.swift           descriptor table for all bash-wrapped modules
+│   ├── BashOutputView.swift       generic renderer for any bash-meister subcommand
+│   ├── AddressBookCleanupView.swift  native Swift feature
+│   └── AddressBookCleanupModel.swift
+├── MeisterWidget/                 iOS widget extension
+├── MeisterTests/                  iOS unit tests
+├── Packages/
+│   └── MeisterKit/                local Swift package — shared engine
+│       ├── Package.swift
+│       └── Sources/MeisterKit/
+│           ├── AddressBook/       scanner, cleanup, sync state, vCard export
+│           └── Bash/              MeisterBash shell-out wrapper
+├── docs/
+│   └── contacts-troubleshooting.md  incident report that drove the AddressBook module
+├── fixtures/                      iOS test images
+└── scripts/                       iOS build/deploy scripts
 ```
 
 ## Design principles
 
-- **Backup before destruction.** Every delete path has a backup or uses
-  iOS's "Recently Deleted" — never silent destruction.
-- **Trash, not rm.** On macOS every move goes to `~/.Trash/` with a timestamp.
-- **Quality-score wins merges.** For contacts we keep the most complete
-  record and transplant phone/email from duplicates before deleting them.
-- **No ML upload.** pHash + Core Image + Vision (when added) run locally.
-- **iCloud-aware.** Uses `PHPhotoLibrary.performChanges` so deletes sync
-  to iCloud Photos and respect the user's choice there.
-- **Never sign out the user's Apple ID.** Cleanup works with the account
-  logged in; it only touches the local source files.
+- **The bash CLI is the source of truth.** Updates to `maf4711/homebrew-meister` propagate to the macOS app automatically because the app shells out instead of forking logic.
+- **Swift-native only where it's strictly better.** CNContactStore, PhotoKit, NEHotspotNetwork — use Apple frameworks when a shell can't reach them. Never reimplement a working bash command.
+- **Trash, not rm.** Every destructive file move on macOS goes to `~/.Trash/` with a timestamp — 30-day rollback.
+- **Backup before destruction.** vCard export, `.abbu` archive, or iOS "Recently Deleted" before any delete.
+- **Zero upload, zero account.** Every app is 100% local.
+- **Never sign out the user's Apple ID.** AddressBook cleanup works with the account logged in; it only touches local source files.
+
+## Adding a new module
+
+1. Implement (or rely on) the bash command in `maf4711/homebrew-meister`.
+2. For the macOS app, add an entry to `BashModule.all` in `MeisterMacOS/BashModule.swift`:
+   ```swift
+   .init(id: "my-tool", title: "My Tool", symbol: "star", group: .dataTools,
+         command: ["my-tool"], takesHostInput: false, runsLive: false)
+   ```
+   No code — `BashOutputView` handles rendering generically.
+3. For iOS, evaluate whether the feature is reachable from the sandbox. If yes, implement in Swift under `MeisterIOS/<Area>/`. If no, skip.
+4. For Swift-only features (like AddressBook cleanup), add the engine to `Packages/MeisterKit/Sources/MeisterKit/<Area>/` so both apps can use it.
 
 ## What's intentionally not here
 
-- No "RAM booster" (iOS manages memory; the buttons in other apps are theater).
+- No second bash CLI. We don't fork `maf4711/homebrew-meister`.
+- No "RAM booster" on iOS (iOS manages memory; the buttons in other apps are theater).
 - No system cache cleanup on iOS (not accessible from a regular app).
-- No battery cycle count (private API, App Store rejection).
-- No access to other apps' data.
+- No battery cycle count on iOS (private API, App Store rejection).
+- No access to other apps' data on either platform.
 
 ## Next up
 
-- **Vision-based similarity**: cluster by feature-print for truly similar (not just pHash-close) images.
-- **Video compression**: AVFoundation export session, HEVC, preserves metadata.
-- **Live Activity** during long scans (Dynamic Island).
-- **Shortcuts**: `Clean Screenshots`, `Backup Contacts`, `Free Up Space` intents.
-- **Gamification**: streaks for daily cleanup.
-- **Undo**: 30-day trash for contact deletes.
-- **macOS storage module**: GUI over `meister storage` once CLI ships.
+- **Live output** for `ntop`/`top`/`sniff`/`thermal` (stream-read pipes, not snapshot).
+- **Scheduled health runs** via LaunchAgent → notify the Mac app of findings.
+- **Homebrew Cask** for the Mac app (`brew install --cask meister-mac`).
+- **App Store** submission for iOS target.
+- **iCloud-aware AddressBook module**: auto-detect sync state, guide user through safe toggling.
+- **Contact dedup GUI on Mac** using the iOS engine (the logic is already shared).
