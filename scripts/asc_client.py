@@ -112,10 +112,18 @@ def wait_until_processed(app_id: str, target_version: str | None = None, timeout
             print("… no builds yet, waiting", flush=True)
             time.sleep(15)
             continue
-        build = builds[0] if target_version is None else next(
-            (b for b in builds if b["attributes"]["version"] == target_version),
-            None,
-        ) or builds[0]
+        if target_version is None:
+            build = builds[0]
+        else:
+            build = next(
+                (b for b in builds if b["attributes"]["version"] == target_version),
+                None,
+            )
+            if build is None:
+                elapsed = int(time.time() - start)
+                print(f"[{elapsed:4d}s] build {target_version} not yet ingested by Apple, waiting", flush=True)
+                time.sleep(20)
+                continue
         state = build["attributes"].get("processingState", "UNKNOWN")
         elapsed = int(time.time() - start)
         print(f"[{elapsed:4d}s] build {build['attributes']['version']} — {state}", flush=True)
