@@ -1,0 +1,7 @@
+"CFBundleDisplayName" = "Meister";
+"NSPhotoLibraryUsageDescription" = "Meister scans your photos on-device to find duplicates, screenshots and blurry images. Nothing leaves your phone.";
+"NSPhotoLibraryAddUsageDescription" = "Meister may restore photos you recently deleted by mistake.";
+"NSContactsUsageDescription" = "Meister finds duplicate contacts and merges them. Processing is 100% on-device — no upload.";
+"NSCalendarsUsageDescription" = "Meister helps archive old events and empty calendars.";
+"NSLocationWhenInUseUsageDescription" = "Used only to read the Wi-Fi network name during network diagnostics.";
+"NSMicrophoneUsageDescription" = "Used only when you run the microphone self-test from the Diagnostics tab.";

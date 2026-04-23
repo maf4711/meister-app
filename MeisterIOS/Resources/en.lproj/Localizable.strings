@@ -1,0 +1,52 @@
+/* Tabs */
+"Photos" = "Photos";
+"Contacts" = "Contacts";
+"Storage" = "Storage";
+"Calendar" = "Calendar";
+"Diagnostics" = "Diagnostics";
+
+/* Permission gates */
+"Photos Access" = "Photos Access";
+"Contacts Access" = "Contacts Access";
+"Calendar Access" = "Calendar Access";
+"Grant Access" = "Grant Access";
+"Requesting Access…" = "Requesting Access…";
+
+/* Photos view */
+"Start Scan" = "Start Scan";
+"Rescan" = "Rescan";
+"Scanning" = "Scanning";
+"Reading library" = "Reading library";
+"Finding screenshots" = "Finding screenshots";
+"Finding large media" = "Finding large media";
+"Detecting duplicates" = "Detecting duplicates";
+"Checking for blur" = "Checking for blur";
+"Reclaim" = "Reclaim";
+"Duplicates" = "Duplicates";
+"Screenshots" = "Screenshots";
+"Screen Recordings" = "Screen Recordings";
+"Blurry Photos" = "Blurry Photos";
+"Large Media" = "Large Media";
+"Large Media (>100 MB)" = "Large Media (>100 MB)";
+
+/* Contacts view */
+"Summary" = "Summary";
+"Total Contacts" = "Total Contacts";
+"Duplicate Groups" = "Duplicate Groups";
+"Low-Quality" = "Low-Quality";
+"Empty" = "Empty";
+"Back Up to vCard" = "Back Up to vCard";
+"Merge into Primary" = "Merge into Primary";
+
+/* Common */
+"Done" = "Done";
+"Cancel" = "Cancel";
+"Delete" = "Delete";
+"Refresh" = "Refresh";
+"Run" = "Run";
+"Tools" = "Tools";
+"Appearance" = "Appearance";
+"Theme" = "Theme";
+"System" = "System";
+"Light" = "Light";
+"Dark" = "Dark";

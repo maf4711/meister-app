@@ -1,0 +1,90 @@
+name: MeisterIOS
+options:
+  bundleIdPrefix: com.merados.meister
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  knownRegions:
+    - en
+    - de
+    - Base
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    DEVELOPMENT_TEAM: K63X3ZTV3Q
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GENERATE_INFOPLIST_FILE: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "10"
+targets:
+  MeisterIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: MeisterIOS
+    info:
+      path: MeisterIOS/Info.plist
+      properties:
+        CFBundleDisplayName: Meister
+        CFBundleName: Meister
+        NSPhotoLibraryUsageDescription: "Meister scans your photos on-device to find duplicates, screenshots and blurry images. Nothing leaves your phone."
+        NSPhotoLibraryAddUsageDescription: "Meister may restore photos you recently deleted by mistake."
+        NSContactsUsageDescription: "Meister finds duplicate contacts and merges them. Processing is 100% on-device — no upload."
+        NSCalendarsUsageDescription: "Meister helps archive old events and empty calendars."
+        NSLocationWhenInUseUsageDescription: "Used only to read the Wi-Fi network name during network diagnostics."
+        UILaunchScreen: {}
+        CFBundleIconName: AppIcon
+        CFBundleLocalizations:
+          - en
+          - de
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.merados.meister.ios
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - target: MeisterWidget
+  MeisterWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MeisterWidget
+      - path: MeisterIOS/Core/MeisterActivity.swift
+    info:
+      path: MeisterWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Meister
+        CFBundleName: Meister
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.merados.meister.ios.widget
+        SKIP_INSTALL: YES
+  MeisterTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MeisterTests
+    dependencies:
+      - target: MeisterIOS
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/MeisterIOS.app/MeisterIOS
+schemes:
+  MeisterIOS:
+    build:
+      targets:
+        MeisterIOS: all
+    test:
+      targets:
+        - MeisterTests

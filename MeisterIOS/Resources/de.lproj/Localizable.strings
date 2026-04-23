@@ -1,0 +1,52 @@
+/* Tabs */
+"Photos" = "Fotos";
+"Contacts" = "Kontakte";
+"Storage" = "Speicher";
+"Calendar" = "Kalender";
+"Diagnostics" = "Diagnose";
+
+/* Permission gates */
+"Photos Access" = "Zugriff auf Fotos";
+"Contacts Access" = "Zugriff auf Kontakte";
+"Calendar Access" = "Zugriff auf Kalender";
+"Grant Access" = "Zugriff erlauben";
+"Requesting Access…" = "Zugriff wird angefordert…";
+
+/* Photos view */
+"Start Scan" = "Scan starten";
+"Rescan" = "Neu scannen";
+"Scanning" = "Scanne";
+"Reading library" = "Lese Mediathek";
+"Finding screenshots" = "Suche Screenshots";
+"Finding large media" = "Suche grosse Medien";
+"Detecting duplicates" = "Erkenne Duplikate";
+"Checking for blur" = "Pruefe auf Unschaerfe";
+"Reclaim" = "Platz zurueckgewinnen";
+"Duplicates" = "Duplikate";
+"Screenshots" = "Screenshots";
+"Screen Recordings" = "Bildschirmaufnahmen";
+"Blurry Photos" = "Unscharfe Fotos";
+"Large Media" = "Grosse Medien";
+"Large Media (>100 MB)" = "Grosse Medien (>100 MB)";
+
+/* Contacts view */
+"Summary" = "Uebersicht";
+"Total Contacts" = "Kontakte gesamt";
+"Duplicate Groups" = "Duplikat-Gruppen";
+"Low-Quality" = "Unvollstaendig";
+"Empty" = "Leer";
+"Back Up to vCard" = "Als vCard sichern";
+"Merge into Primary" = "Zusammenfuehren";
+
+/* Common */
+"Done" = "Fertig";
+"Cancel" = "Abbrechen";
+"Delete" = "Loeschen";
+"Refresh" = "Aktualisieren";
+"Run" = "Starten";
+"Tools" = "Werkzeuge";
+"Appearance" = "Darstellung";
+"Theme" = "Design";
+"System" = "System";
+"Light" = "Hell";
+"Dark" = "Dunkel";

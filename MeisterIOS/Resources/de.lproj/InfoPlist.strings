@@ -1,0 +1,7 @@
+"CFBundleDisplayName" = "Meister";
+"NSPhotoLibraryUsageDescription" = "Meister durchsucht deine Fotos direkt auf dem Geraet nach Duplikaten, Screenshots und unscharfen Bildern. Nichts verlaesst dein Telefon.";
+"NSPhotoLibraryAddUsageDescription" = "Meister kann versehentlich geloeschte Fotos wiederherstellen.";
+"NSContactsUsageDescription" = "Meister findet Duplikat-Kontakte und fuegt sie zusammen. Die Verarbeitung laeuft komplett auf dem Geraet — ohne Upload.";
+"NSCalendarsUsageDescription" = "Meister hilft beim Archivieren alter Termine und leerer Kalender.";
+"NSLocationWhenInUseUsageDescription" = "Wird nur fuer den WLAN-Namen bei Netzwerk-Diagnosen benoetigt.";
+"NSMicrophoneUsageDescription" = "Wird nur beim Mikrofon-Selbsttest im Diagnose-Tab verwendet.";
