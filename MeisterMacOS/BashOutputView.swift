@@ -9,6 +9,7 @@ struct BashOutputView: View {
     @State private var isRunning: Bool = false
     @State private var hostInput: String = ""
     @State private var bashInstalled: Bool = true
+    @State private var showConfirm: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,12 +21,24 @@ struct BashOutputView: View {
                 content
             }
         }
-        .task {
+        .task(id: module.id) {
             bashInstalled = isBashInstalled()
-            if bashInstalled && !module.runsLive && !module.takesHostInput {
+            output = ""
+            errorText = ""
+            exitStatus = nil
+            if bashInstalled && !module.runsLive && !module.takesHostInput && !module.destructive {
                 await run()
             }
         }
+        .alert("Run \(module.title)?",
+               isPresented: $showConfirm,
+               actions: {
+                   Button("Cancel", role: .cancel) {}
+                   Button("Proceed", role: .destructive) { Task { await run() } }
+               },
+               message: {
+                   Text("This runs `meister \(module.command.joined(separator: " "))` with destructive intent on your system.")
+               })
     }
 
     // MARK: - Header
@@ -45,10 +58,16 @@ struct BashOutputView: View {
                     .frame(width: 200)
             }
             Button {
-                Task { await run() }
+                if module.destructive {
+                    showConfirm = true
+                } else {
+                    Task { await run() }
+                }
             } label: {
-                Label(isRunning ? "Running…" : "Run", systemImage: "play.fill")
+                Label(isRunning ? "Running…" : (module.destructive ? "Run (destructive)" : "Run"),
+                      systemImage: module.destructive ? "exclamationmark.triangle.fill" : "play.fill")
             }
+            .tint(module.destructive ? .orange : .accentColor)
             .disabled(isRunning || (module.takesHostInput && hostInput.isEmpty))
             .keyboardShortcut("r")
         }

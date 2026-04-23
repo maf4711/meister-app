@@ -132,17 +132,40 @@ meister/
 - **Zero upload, zero account.** Every app is 100% local.
 - **Never sign out the user's Apple ID.** AddressBook cleanup works with the account logged in; it only touches local source files.
 
-## Adding a new module
+## Feature development — the bash CLI is master
 
-1. Implement (or rely on) the bash command in `maf4711/homebrew-meister`.
-2. For the macOS app, add an entry to `BashModule.all` in `MeisterMacOS/BashModule.swift`:
-   ```swift
-   .init(id: "my-tool", title: "My Tool", symbol: "star", group: .dataTools,
-         command: ["my-tool"], takesHostInput: false, runsLive: false)
-   ```
-   No code — `BashOutputView` handles rendering generically.
-3. For iOS, evaluate whether the feature is reachable from the sandbox. If yes, implement in Swift under `MeisterIOS/<Area>/`. If no, skip.
-4. For Swift-only features (like AddressBook cleanup), add the engine to `Packages/MeisterKit/Sources/MeisterKit/<Area>/` so both apps can use it.
+**Rule:** every maintenance feature lives in `maf4711/homebrew-meister` first.
+The apps adapt; they do not fork.
+
+```
+New feature idea
+      │
+      ▼
+  1. Implement in maf4711/homebrew-meister (bash)
+      │
+      ▼
+  2. brew upgrade meister   ← macOS GUI gets it automatically if no UI tweak needed
+      │
+      ▼
+  3. Mac app (optional): append one line to BashModule.all
+      .init(id: "my-tool", title: "My Tool", symbol: "star",
+            group: .macTools, command: ["my-tool"])
+      Zero Swift code. BashOutputView renders it.
+      │
+      ▼
+  4. iOS app (optional, only if sandbox allows):
+      implement a native Swift equivalent in MeisterIOS/<Area>/ or
+      Packages/MeisterKit/Sources/MeisterKit/<Area>/
+      This is the ONLY case where logic gets duplicated — because iOS
+      cannot shell out.
+```
+
+### Rules of engagement
+
+- **Never fork bash features into Swift on macOS.** If bash can do it, the Mac app shells out.
+- **Swift-only features** (CNContactStore, PhotoKit, CallKit, etc.) live in `Packages/MeisterKit/` so both Mac and iOS can share them.
+- **Destructive modules** (anything that modifies state) carry `destructive: true` in `BashModule`. The Mac app shows a confirmation alert before executing.
+- **Live-stream modules** (`ntop`, `top`, `sniff`, `thermal`) are marked `runsLive: true` and wait for an explicit Run click rather than auto-executing.
 
 ## What's intentionally not here
 
