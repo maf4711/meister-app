@@ -130,6 +130,16 @@ struct MacRootView: View {
                 NotificationPermissionsView()
             case "icloud-sync":
                 ICloudSyncView()
+            case "wifi-passwords":
+                WiFiPasswordsView()
+            case "hosts-blocklist":
+                HostsBlocklistView()
+            case "app-permissions":
+                AppPermissionsView()
+            case "storage-forecast":
+                StorageForecastView()
+            case "slack-webhook":
+                SlackWebhookView()
             default:
                 BashOutputView(module: module)
             }
