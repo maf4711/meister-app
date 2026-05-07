@@ -58,6 +58,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
         .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
         .init(id: "duplicates",      title: "Duplicate Finder",    symbol: "doc.on.doc",                group: .storage,      command: []), // native Swift
+        .init(id: "undo-cleanup",    title: "Undo Last Cleanup",   symbol: "arrow.uturn.backward.circle", group: .storage,    command: []), // native Swift
         .init(id: "disk",            title: "Disk Analyzer",       symbol: "externaldrive",             group: .storage,      command: ["disk"]),
         .init(id: "large-files",     title: "Large Files",         symbol: "doc.badge.gearshape",       group: .storage,      command: ["-L", "-n"]),
         .init(id: "caches",          title: "Clean Caches",        symbol: "archivebox",                group: .storage,      command: ["-C", "-n"]),
@@ -71,6 +72,8 @@ struct BashModule: Identifiable, Hashable {
 
         // Privacy & Security
         .init(id: "security-status", title: "Security Status",     symbol: "checkmark.shield",          group: .privacy,      command: []), // native Swift
+        .init(id: "keychain-audit",  title: "Keychain Audit",      symbol: "key.horizontal",            group: .privacy,      command: []), // native Swift
+        .init(id: "ssh-keys",        title: "SSH Keys",            symbol: "key",                       group: .privacy,      command: []), // native Swift
         .init(id: "browser-privacy", title: "Browser Privacy",     symbol: "eye.slash",                 group: .privacy,      command: []), // native Swift
         .init(id: "login-items",     title: "Login Items & Agents",symbol: "person.crop.circle.badge.clock", group: .privacy, command: []), // native Swift
         .init(id: "hosts-file",      title: "/etc/hosts",          symbol: "doc.text",                  group: .privacy,      command: []), // native Swift
@@ -91,6 +94,7 @@ struct BashModule: Identifiable, Hashable {
 
         // Hardware
         .init(id: "hardware-inventory", title: "Hardware Inventory", symbol: "gearshape.2",             group: .hardware,     command: []), // native Swift
+        .init(id: "ssd-health",      title: "Disk Health (SMART)", symbol: "stethoscope",               group: .hardware,     command: []), // native Swift
         .init(id: "energy-impact",   title: "Energy Impact",       symbol: "bolt.heart",                group: .hardware,     command: []), // native Swift
         .init(id: "usb-devices",     title: "USB Devices",         symbol: "cable.connector",           group: .hardware,     command: []), // native Swift
         .init(id: "battery",         title: "Battery Health",      symbol: "battery.75",                group: .hardware,     command: ["battery"]),
@@ -108,6 +112,7 @@ struct BashModule: Identifiable, Hashable {
 
         // Data
         .init(id: "addressbook",     title: "AddressBook Cleanup", symbol: "externaldrive.badge.exclamationmark", group: .dataTools, command: []), // native Swift
+        .init(id: "tag-manager",     title: "Tag Manager",         symbol: "tag",                       group: .dataTools,    command: []), // native Swift
         .init(id: "dotfiles-status", title: "Dotfiles Status",     symbol: "doc.on.doc",                group: .dataTools,    command: ["-dotfiles"]),
         .init(id: "dotfiles-push",   title: "Dotfiles Push",       symbol: "arrow.up.doc",              group: .dataTools,    command: ["push"], runsLive: true, destructive: true),
     ]
