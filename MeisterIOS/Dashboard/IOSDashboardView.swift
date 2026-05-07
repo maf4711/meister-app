@@ -59,9 +59,17 @@ struct IOSDashboardView: View {
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(MD3.SemColor.textPrimary)
             if let s = model.snapshot {
-                Text("\(s.modelName) · \(s.osName) \(s.osVersion)")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                HStack(spacing: 6) {
+                    Image(systemName: s.runtimeKind.icon)
+                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                    Text(s.runtimeKind.label)
+                        .font(MD3.Typo.caption.bold())
+                    Text("·")
+                        .foregroundStyle(MD3.SemColor.textTertiary)
+                    Text("\(s.modelName) · \(s.osName) \(s.osVersion)")
+                        .font(MD3.Typo.caption)
+                        .foregroundStyle(MD3.SemColor.textSecondary)
+                }
             }
         }
     }
