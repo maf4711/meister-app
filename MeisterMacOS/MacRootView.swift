@@ -33,6 +33,10 @@ struct MacRootView: View {
                 AddressBookCleanupView()
             case "system-cleanup":
                 SystemCleanupView()
+            case "uninstaller":
+                UninstallerView()
+            case "large-old-files":
+                LargeFilesView()
             default:
                 BashOutputView(module: module)
             }

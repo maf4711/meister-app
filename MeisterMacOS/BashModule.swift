@@ -51,6 +51,8 @@ struct BashModule: Identifiable, Hashable {
 
         // Storage & Cleanup
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
+        .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
+        .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
         .init(id: "disk",            title: "Disk Analyzer",       symbol: "externaldrive",             group: .storage,      command: ["disk"]),
         .init(id: "large-files",     title: "Large Files",         symbol: "doc.badge.gearshape",       group: .storage,      command: ["-L", "-n"]),
         .init(id: "caches",          title: "Clean Caches",        symbol: "archivebox",                group: .storage,      command: ["-C", "-n"]),
