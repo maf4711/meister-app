@@ -56,6 +56,7 @@ struct BashModule: Identifiable, Hashable {
         // Storage & Cleanup
         .init(id: "quick-clean",     title: "Quick Clean",         symbol: "wand.and.stars",            group: .storage,      command: []), // native Swift, one-click
         .init(id: "autopilot",       title: "Autopilot",           symbol: "clock.arrow.2.circlepath",  group: .storage,      command: []), // native Swift, scheduler
+        .init(id: "storage-forecast", title: "Storage Forecast",   symbol: "chart.line.uptrend.xyaxis", group: .storage,      command: []), // native Swift
         .init(id: "extended-attributes", title: "Extended Attrs",  symbol: "doc.badge.gearshape",       group: .storage,      command: []), // native Swift
         .init(id: "symlink-inspector", title: "Symlink Inspector", symbol: "link.badge.exclamationmark", group: .storage,     command: []), // native Swift
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
@@ -76,6 +77,9 @@ struct BashModule: Identifiable, Hashable {
 
         // Privacy & Security
         .init(id: "security-status", title: "Security Status",     symbol: "checkmark.shield",          group: .privacy,      command: []), // native Swift
+        .init(id: "app-permissions", title: "App Permissions (TCC)", symbol: "lock.shield",             group: .privacy,      command: []), // native Swift
+        .init(id: "wifi-passwords",  title: "Wi-Fi Networks",      symbol: "wifi",                      group: .privacy,      command: []), // native Swift
+        .init(id: "hosts-blocklist", title: "Hosts Blocklist",     symbol: "shield.lefthalf.filled",    group: .privacy,      command: []), // native Swift
         .init(id: "keychain-audit",  title: "Keychain Audit",      symbol: "key.horizontal",            group: .privacy,      command: []), // native Swift
         .init(id: "ssh-keys",        title: "SSH Keys",            symbol: "key",                       group: .privacy,      command: []), // native Swift
         .init(id: "browser-privacy", title: "Browser Privacy",     symbol: "eye.slash",                 group: .privacy,      command: []), // native Swift
@@ -123,6 +127,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "desktop-fix",     title: "Organize Desktop",    symbol: "square.grid.3x3.topleft.filled", group: .macTools, command: ["-organise_desktop_fix"], runsLive: true, destructive: true),
         .init(id: "moncon",          title: "Monitor Controller",  symbol: "display",                   group: .macTools,     command: ["-moncon"]),
         .init(id: "default-apps",    title: "Default Apps",        symbol: "app.badge",                 group: .macTools,     command: []), // native Swift
+        .init(id: "slack-webhook",   title: "Slack Webhook",       symbol: "paperplane",                group: .macTools,     command: []), // native Swift
 
         // Data
         .init(id: "addressbook",     title: "AddressBook Cleanup", symbol: "externaldrive.badge.exclamationmark", group: .dataTools, command: []), // native Swift

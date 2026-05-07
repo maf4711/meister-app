@@ -6,6 +6,9 @@ struct MeisterMacOSApp: App {
     /// Selection bus for deep-link URLs and menu-bar quick-actions.
     @StateObject private var nav = NavigationState()
 
+    @AppStorage("meister.onboarding.completed.v1") private var hasSeenOnboarding: Bool = false
+    @State private var showOnboarding: Bool = false
+
     var body: some Scene {
         WindowGroup("Meister") {
             MacRootView()
@@ -16,6 +19,17 @@ struct MeisterMacOSApp: App {
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     handleURL(url)
+                }
+                .overlay {
+                    if showOnboarding {
+                        OnboardingView(isPresented: $showOnboarding)
+                            .environmentObject(nav)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    }
+                }
+                .animation(.snappy, value: showOnboarding)
+                .onAppear {
+                    if !hasSeenOnboarding { showOnboarding = true }
                 }
         }
         .windowStyle(.hiddenTitleBar)
