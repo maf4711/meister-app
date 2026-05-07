@@ -22,7 +22,8 @@ sed -i '' "s/CURRENT_PROJECT_VERSION: \".*\"/CURRENT_PROJECT_VERSION: \"$NEXT\"/
 xcodegen generate | tail -2
 
 echo "══ 2/6  Archiving"
-rm -rf build
+# Targeted clean — keep build/auto-ship.log alive (auto-ship.sh appends to it).
+rm -rf build/MeisterIOS.xcarchive build/ipa build/stage
 xcodebuild \
     -project Meister.xcodeproj \
     -scheme MeisterIOS \

@@ -50,6 +50,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "launch-agent",    title: "Install LaunchAgent", symbol: "clock.arrow.circlepath",    group: .maintenance,  command: ["-I"],   runsLive: true, destructive: true),
 
         // Storage & Cleanup
+        .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
         .init(id: "disk",            title: "Disk Analyzer",       symbol: "externaldrive",             group: .storage,      command: ["disk"]),
         .init(id: "large-files",     title: "Large Files",         symbol: "doc.badge.gearshape",       group: .storage,      command: ["-L", "-n"]),
         .init(id: "caches",          title: "Clean Caches",        symbol: "archivebox",                group: .storage,      command: ["-C", "-n"]),

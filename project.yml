@@ -130,6 +130,18 @@ targets:
         BUNDLE_LOADER: $(TEST_HOST)
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/MeisterIOS.app/MeisterIOS
 
+  MeisterMacOSTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: MeisterMacOSTests
+    dependencies:
+      - target: MeisterMacOS
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Meister.app/Contents/MacOS/Meister
+
 schemes:
   MeisterIOS:
     build:
@@ -142,3 +154,6 @@ schemes:
     build:
       targets:
         MeisterMacOS: all
+    test:
+      targets:
+        - MeisterMacOSTests
