@@ -12,6 +12,16 @@ final class HealthScoreModel: ObservableObject {
         defer { isLoading = false }
         self.snapshot = await reader.snapshot()
     }
+
+    /// Auto-refresh loop for `.task`. Cancels with view disappear.
+    func startAutoRefresh(every interval: Duration = .seconds(30)) async {
+        await reload()
+        while !Task.isCancelled {
+            try? await Task.sleep(for: interval)
+            if Task.isCancelled { break }
+            await reload()
+        }
+    }
 }
 
 struct HealthScoreView: View {
@@ -24,7 +34,7 @@ struct HealthScoreView: View {
             content
         }
         .background(MD3.SemColor.background)
-        .task { if model.snapshot == nil { await model.reload() } }
+        .task { await model.startAutoRefresh() }
     }
 
     private var header: some View {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MacRootView: View {
     @State private var selection: BashModule.ID = "dashboard"
+    @State private var commandSearchOpen = false
 
     var body: some View {
         NavigationSplitView {
@@ -10,6 +11,29 @@ struct MacRootView: View {
         } detail: {
             detail
         }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button { commandSearchOpen = true } label: {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+                .keyboardShortcut("k", modifiers: [.command])
+                .help("⌘K — Modul suchen")
+            }
+        }
+        .overlay {
+            if commandSearchOpen {
+                ZStack {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                        .onTapGesture { commandSearchOpen = false }
+                    CommandSearchView(isPresented: $commandSearchOpen,
+                                      selection: $selection)
+                        .shadow(color: .black.opacity(0.4), radius: 30, y: 10)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
+        .animation(.snappy, value: commandSearchOpen)
     }
 
     private var sidebar: some View {
@@ -73,6 +97,18 @@ struct MacRootView: View {
                 TagManagerView()
             case "undo-cleanup":
                 UndoCleanupView()
+            case "xcode-switcher":
+                XcodeSwitcherView()
+            case "simulator-manager":
+                SimulatorManagerView()
+            case "docker-cleanup":
+                DockerCleanupView()
+            case "brew-doctor":
+                BrewDoctorView()
+            case "rosetta-audit":
+                RosettaAuditView()
+            case "quick-clean":
+                QuickCleanView()
             default:
                 BashOutputView(module: module)
             }
