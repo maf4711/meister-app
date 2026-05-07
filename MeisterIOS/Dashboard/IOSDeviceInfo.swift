@@ -13,6 +13,30 @@ struct IOSDeviceSnapshot: Equatable {
     let uptimeSeconds: Int64
     let batteryLevel: Float          // 0...1, -1 if unknown
     let batteryState: UIDevice.BatteryState
+    let runtimeKind: RuntimeKind
+
+    enum RuntimeKind: String, Equatable {
+        case iPhone, iPad
+        case macCatalyst              // Mac Catalyst-built variant
+        case iOSAppOnMac              // "Designed for iPad" running on Apple Silicon Mac
+
+        var label: String {
+            switch self {
+            case .iPhone:        return "iPhone"
+            case .iPad:          return "iPad"
+            case .macCatalyst:   return "Mac (Catalyst)"
+            case .iOSAppOnMac:   return "Mac (iPad-App)"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .iPhone:                return "iphone"
+            case .iPad:                  return "ipad"
+            case .macCatalyst, .iOSAppOnMac: return "macbook"
+            }
+        }
+    }
 
     var diskUsagePct: Double {
         guard totalDiskBytes > 0 else { return 0 }
@@ -23,11 +47,25 @@ struct IOSDeviceSnapshot: Equatable {
 actor IOSDeviceReader {
     func read() async -> IOSDeviceSnapshot {
         let device = await MainActor.run { UIDevice.current }
-        let modelName = await MainActor.run {
-            // Returns "iPhone" / "iPad". Hardware identifier (iPhone15,3) needs sysctl.
-            return device.model
+        let runtime = detectRuntimeKind()
+        let modelName: String
+        let osName: String
+        let osVersion: String
+        switch runtime {
+        case .iOSAppOnMac, .macCatalyst:
+            // The host Mac. UIDevice would lie ("iPad"); use sysctl for real info
+            // and host operating-system version for the macOS version, since
+            // ProcessInfo's version-string still reports the iOS-equivalent.
+            modelName = macModelName() ?? "Mac"
+            osName = "macOS"
+            let v = ProcessInfo.processInfo.operatingSystemVersion
+            osVersion = "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
+        case .iPhone, .iPad:
+            modelName = await MainActor.run { device.model }
+            osName = await MainActor.run { device.systemName }
+            osVersion = await MainActor.run { device.systemVersion }
         }
-        let os = await MainActor.run { (device.systemName, device.systemVersion) }
+        let os = (osName, osVersion)
 
         let (total, free) = volumeStats()
         let appUsed = appBundleAndContainerSize()
@@ -50,8 +88,30 @@ actor IOSDeviceReader {
             processorCount: cpu,
             uptimeSeconds: uptime,
             batteryLevel: level,
-            batteryState: state
+            batteryState: state,
+            runtimeKind: runtime
         )
+    }
+
+    private nonisolated func detectRuntimeKind() -> IOSDeviceSnapshot.RuntimeKind {
+        // ProcessInfo flags are the source of truth on iOS 14+ / macOS 11+.
+        if ProcessInfo.processInfo.isiOSAppOnMac { return .iOSAppOnMac }
+        if ProcessInfo.processInfo.isMacCatalystApp { return .macCatalyst }
+        // Fall back to UIDevice's idiom for native iOS.
+        let idiom = UIDevice.current.userInterfaceIdiom
+        return idiom == .pad ? .iPad : .iPhone
+    }
+
+    /// Best-effort Mac model lookup via sysctl.
+    /// `hw.model` returns e.g. "Macmini9,1" or "MacBookPro18,2".
+    private nonisolated func macModelName() -> String? {
+        var size: size_t = 0
+        sysctlbyname("hw.model", nil, &size, nil, 0)
+        guard size > 0 else { return nil }
+        var bytes = [CChar](repeating: 0, count: size)
+        sysctlbyname("hw.model", &bytes, &size, nil, 0)
+        let raw = String(cString: bytes)
+        return raw.isEmpty ? nil : raw
     }
 
     private nonisolated func volumeStats() -> (total: Int64, free: Int64) {

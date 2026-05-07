@@ -65,6 +65,21 @@ final class PhotosViewModel {
         do {
             try await PhotoScanner.delete(assets)
             destructionCount += 1
+            // Remove the just-deleted assets from in-memory lists so the UI
+            // updates immediately — without waiting for the user to re-scan.
+            let deletedIDs = Set(assets.map(\.localIdentifier))
+            library.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
+            screenshots.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
+            screenRecordings.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
+            blurryPhotos.removeAll { deletedIDs.contains($0.0.asset.localIdentifier) }
+            largeMedia.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
+            duplicateGroups = duplicateGroups
+                .map { group -> DuplicateDetector.Group in
+                    var copy = group
+                    copy.items.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
+                    return copy
+                }
+                .filter { $0.items.count > 1 }   // drop groups that no longer have duplicates
         } catch {
             // The user cancelled the system confirmation — no error to surface.
         }
@@ -75,6 +90,38 @@ struct PhotosCleanerView: View {
     @State private var model = PhotosViewModel()
     @State private var permissions = PermissionManager.shared
     @State private var presentedCategory: Category?
+    @State private var showAutoDeleteConfirm = false
+
+    /// Every reclaimable asset across all categories — duplicates (copies only),
+    /// screenshots, screen recordings, blurry photos. Excludes Large Media —
+    /// large files often aren't junk, opt-in only.
+    private var allReclaimableAssets: [PHAsset] {
+        var ids = Set<String>()
+        var out: [PHAsset] = []
+        let add: (PHAsset) -> Void = { a in
+            if ids.insert(a.localIdentifier).inserted { out.append(a) }
+        }
+        for group in model.duplicateGroups {
+            // Drop the largest, keep the others as deletion candidates.
+            let sorted = group.items.sorted { $0.sizeBytes > $1.sizeBytes }
+            for copy in sorted.dropFirst() { add(copy.asset) }
+        }
+        model.screenshots.forEach { add($0.asset) }
+        model.screenRecordings.forEach { add($0.asset) }
+        model.blurryPhotos.forEach { add($0.0.asset) }
+        return out
+    }
+
+    private var allReclaimableBytes: Int64 {
+        allReclaimableAssets.reduce(0) { acc, asset in
+            // Best-effort size lookup via PhotoItem mapping
+            let id = asset.localIdentifier
+            for item in model.library where item.asset.localIdentifier == id {
+                return acc + item.sizeBytes
+            }
+            return acc
+        }
+    }
 
     enum Category: String, Identifiable, CaseIterable {
         case duplicates, screenshots, screenRecordings, blur, large
@@ -166,6 +213,22 @@ struct PhotosCleanerView: View {
                 }
 
                 Section {
+                    Button(role: .destructive) {
+                        showAutoDeleteConfirm = true
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Auto-Delete All").fontWeight(.semibold)
+                                Text("\(allReclaimableAssets.count) Items · \(ByteSize.formatted(allReclaimableBytes))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "trash.fill")
+                        }
+                    }
+                    .disabled(allReclaimableAssets.isEmpty)
+
                     Button {
                         Task { await model.scan() }
                     } label: {
@@ -178,6 +241,17 @@ struct PhotosCleanerView: View {
             detail(for: category)
         }
         .haptic(.destruction, trigger: model.destructionCount)
+        .confirmationDialog("Alle Vorschläge in den Papierkorb?",
+                            isPresented: $showAutoDeleteConfirm,
+                            titleVisibility: .visible) {
+            Button("\(allReclaimableAssets.count) löschen · \(ByteSize.formatted(allReclaimableBytes))",
+                   role: .destructive) {
+                Task { await model.delete(allReclaimableAssets) }
+            }
+            Button("Abbrechen", role: .cancel) { }
+        } message: {
+            Text("Duplicates (Copies), Screenshots, Screen Recordings und Blurry Photos. Large Media bleibt aus — ist meistens kein Junk. Items landen in 'Recently Deleted' und sind 30 Tage rückholbar.")
+        }
     }
 
     private func summaryRow(_ category: Category, itemCount: Int, reclaimable: Int64) -> some View {

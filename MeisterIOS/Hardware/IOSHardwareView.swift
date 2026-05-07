@@ -14,8 +14,9 @@ struct IOSHardwareView: View {
                     .font(.system(size: 28, weight: .light))
                     .foregroundStyle(MD3.SemColor.textPrimary)
                 if let s = model.snapshot {
-                    section("Device", icon: "iphone",
+                    section("Device", icon: s.runtimeKind.icon,
                             rows: [
+                                ("Runtime", s.runtimeKind.label),
                                 ("Model", s.modelName),
                                 ("OS", "\(s.osName) \(s.osVersion)"),
                                 ("Hardware ID", hardwareIdentifier()),
