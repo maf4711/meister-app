@@ -61,31 +61,19 @@ struct HealthScoreView: View {
     }
 
     private func scoreCircle(_ score: Int) -> some View {
-        let color: Color = {
-            switch score {
-            case 80...100: return MD3.SemColor.success
-            case 50..<80:  return MD3.SemColor.warning
-            default:       return MD3.SemColor.error
+        HealthRing(progress: Double(score) / 100,
+                   size: 180,
+                   lineWidth: 14,
+                   isComputing: model.isLoading)
+            .overlay {
+                VStack(spacing: 0) {
+                    NumberFlow(score, font: .system(size: 56, weight: .light))
+                        .foregroundStyle(MD3.SemColor.textPrimary)
+                    Text("/ 100")
+                        .font(MD3.Typo.caption)
+                        .foregroundStyle(MD3.SemColor.textSecondary)
+                }
             }
-        }()
-        return ZStack {
-            Circle()
-                .stroke(MD3.SemColor.surfaceRaised, lineWidth: 12)
-                .frame(width: 160, height: 160)
-            Circle()
-                .trim(from: 0, to: CGFloat(score) / 100)
-                .stroke(color, style: .init(lineWidth: 12, lineCap: .round))
-                .frame(width: 160, height: 160)
-                .rotationEffect(.degrees(-90))
-            VStack(spacing: 0) {
-                Text("\(score)")
-                    .font(MD3.Typo.tabular(.system(size: 56, weight: .light)))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
-                Text("/ 100")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
-            }
-        }
     }
 
     private func signals(_ signals: [HealthSignal]) -> some View {
