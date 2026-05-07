@@ -1,7 +1,12 @@
 import SwiftUI
 
+@MainActor
+final class NavigationState: ObservableObject {
+    @Published var selection: BashModule.ID = "dashboard"
+}
+
 struct MacRootView: View {
-    @State private var selection: BashModule.ID = "dashboard"
+    @EnvironmentObject private var nav: NavigationState
     @State private var commandSearchOpen = false
 
     var body: some View {
@@ -27,7 +32,7 @@ struct MacRootView: View {
                         .ignoresSafeArea()
                         .onTapGesture { commandSearchOpen = false }
                     CommandSearchView(isPresented: $commandSearchOpen,
-                                      selection: $selection)
+                                      selection: $nav.selection)
                         .shadow(color: .black.opacity(0.4), radius: 30, y: 10)
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
@@ -37,7 +42,7 @@ struct MacRootView: View {
     }
 
     private var sidebar: some View {
-        List(selection: $selection) {
+        List(selection: $nav.selection) {
             ForEach(BashModule.grouped(), id: \.0) { group, modules in
                 Section(group.rawValue) {
                     ForEach(modules) { module in
@@ -51,7 +56,7 @@ struct MacRootView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let module = BashModule.all.first(where: { $0.id == selection }) {
+        if let module = BashModule.all.first(where: { $0.id == nav.selection }) {
             switch module.id {
             case "dashboard":
                 DashboardView()
@@ -109,6 +114,22 @@ struct MacRootView: View {
                 RosettaAuditView()
             case "quick-clean":
                 QuickCleanView()
+            case "extended-attributes":
+                ExtendedAttributesView()
+            case "symlink-inspector":
+                SymlinkInspectorView()
+            case "vpn-status":
+                VPNStatusView()
+            case "memory-pressure":
+                MemoryPressureView()
+            case "bluetooth-devices":
+                BluetoothDevicesView()
+            case "autopilot":
+                AutopilotView()
+            case "notification-perms":
+                NotificationPermissionsView()
+            case "icloud-sync":
+                ICloudSyncView()
             default:
                 BashOutputView(module: module)
             }

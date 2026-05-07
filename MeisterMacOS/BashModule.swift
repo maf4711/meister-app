@@ -55,6 +55,9 @@ struct BashModule: Identifiable, Hashable {
 
         // Storage & Cleanup
         .init(id: "quick-clean",     title: "Quick Clean",         symbol: "wand.and.stars",            group: .storage,      command: []), // native Swift, one-click
+        .init(id: "autopilot",       title: "Autopilot",           symbol: "clock.arrow.2.circlepath",  group: .storage,      command: []), // native Swift, scheduler
+        .init(id: "extended-attributes", title: "Extended Attrs",  symbol: "doc.badge.gearshape",       group: .storage,      command: []), // native Swift
+        .init(id: "symlink-inspector", title: "Symlink Inspector", symbol: "link.badge.exclamationmark", group: .storage,     command: []), // native Swift
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
         .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
         .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
@@ -78,9 +81,12 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "browser-privacy", title: "Browser Privacy",     symbol: "eye.slash",                 group: .privacy,      command: []), // native Swift
         .init(id: "login-items",     title: "Login Items & Agents",symbol: "person.crop.circle.badge.clock", group: .privacy, command: []), // native Swift
         .init(id: "hosts-file",      title: "/etc/hosts",          symbol: "doc.text",                  group: .privacy,      command: []), // native Swift
+        .init(id: "notification-perms", title: "Notification Perms", symbol: "bell.badge",              group: .privacy,      command: []), // native Swift
+        .init(id: "vpn-status",      title: "VPN Status",          symbol: "lock.shield",               group: .privacy,      command: []), // native Swift
 
         // Backup
         .init(id: "time-machine",    title: "Time Machine & Snapshots", symbol: "clock.arrow.circlepath", group: .backup,    command: []), // native Swift
+        .init(id: "icloud-sync",     title: "iCloud Drive",        symbol: "icloud",                    group: .backup,      command: []), // native Swift
 
         // Network
         .init(id: "wifi",            title: "Wi-Fi Diagnostics",   symbol: "wifi",                      group: .network,      command: ["wifi"]),
@@ -96,6 +102,8 @@ struct BashModule: Identifiable, Hashable {
         // Hardware
         .init(id: "hardware-inventory", title: "Hardware Inventory", symbol: "gearshape.2",             group: .hardware,     command: []), // native Swift
         .init(id: "ssd-health",      title: "Disk Health (SMART)", symbol: "stethoscope",               group: .hardware,     command: []), // native Swift
+        .init(id: "memory-pressure", title: "Memory Pressure (Live)", symbol: "memorychip.fill",        group: .hardware,     command: []), // native Swift, live
+        .init(id: "bluetooth-devices", title: "Bluetooth Devices", symbol: "antenna.radiowaves.left.and.right", group: .hardware, command: []), // native Swift
         .init(id: "energy-impact",   title: "Energy Impact",       symbol: "bolt.heart",                group: .hardware,     command: []), // native Swift
         .init(id: "usb-devices",     title: "USB Devices",         symbol: "cable.connector",           group: .hardware,     command: []), // native Swift
         .init(id: "battery",         title: "Battery Health",      symbol: "battery.75",                group: .hardware,     command: ["battery"]),
