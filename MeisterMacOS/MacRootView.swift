@@ -37,6 +37,20 @@ struct MacRootView: View {
                 UninstallerView()
             case "large-old-files":
                 LargeFilesView()
+            case "duplicates":
+                DuplicatesView()
+            case "security-status":
+                SecurityStatusView()
+            case "browser-privacy":
+                BrowserPrivacyView()
+            case "login-items":
+                LoginItemsView()
+            case "hosts-file":
+                HostsView()
+            case "time-machine":
+                TimeMachineView()
+            case "health-score":
+                HealthScoreView()
             default:
                 BashOutputView(module: module)
             }
