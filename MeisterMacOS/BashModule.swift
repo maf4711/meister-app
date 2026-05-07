@@ -18,6 +18,8 @@ struct BashModule: Identifiable, Hashable {
         case overview = "Overview"
         case maintenance = "Maintenance"
         case storage = "Storage & Cleanup"
+        case privacy = "Privacy & Security"
+        case backup = "Backup"
         case network = "Network"
         case hardware = "Hardware"
         case macTools = "Mac Tools"
@@ -39,6 +41,7 @@ struct BashModule: Identifiable, Hashable {
 
     static let all: [BashModule] = [
         // Overview
+        .init(id: "health-score",    title: "Health Score",        symbol: "heart.text.square.fill",    group: .overview,     command: []), // native Swift
         .init(id: "health",          title: "Health Dashboard",    symbol: "heart.text.square",         group: .overview,     command: ["-H"]),
         .init(id: "menu",            title: "TUI Menu",            symbol: "list.bullet.rectangle",     group: .overview,     command: ["menu"], runsLive: true),
 
@@ -51,6 +54,9 @@ struct BashModule: Identifiable, Hashable {
 
         // Storage & Cleanup
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
+        .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
+        .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
+        .init(id: "duplicates",      title: "Duplicate Finder",    symbol: "doc.on.doc",                group: .storage,      command: []), // native Swift
         .init(id: "disk",            title: "Disk Analyzer",       symbol: "externaldrive",             group: .storage,      command: ["disk"]),
         .init(id: "large-files",     title: "Large Files",         symbol: "doc.badge.gearshape",       group: .storage,      command: ["-L", "-n"]),
         .init(id: "caches",          title: "Clean Caches",        symbol: "archivebox",                group: .storage,      command: ["-C", "-n"]),
@@ -61,6 +67,15 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "free",            title: "Free RAM",            symbol: "memorychip",                group: .storage,      command: ["free"], runsLive: true, destructive: true),
         .init(id: "startup",         title: "Startup Items",       symbol: "power",                     group: .storage,      command: ["startup"]),
         .init(id: "clear-recent",    title: "Clear Recent Items",  symbol: "clock.arrow.2.circlepath",  group: .storage,      command: ["-clearrecent"], runsLive: true, destructive: true),
+
+        // Privacy & Security
+        .init(id: "security-status", title: "Security Status",     symbol: "checkmark.shield",          group: .privacy,      command: []), // native Swift
+        .init(id: "browser-privacy", title: "Browser Privacy",     symbol: "eye.slash",                 group: .privacy,      command: []), // native Swift
+        .init(id: "login-items",     title: "Login Items & Agents",symbol: "person.crop.circle.badge.clock", group: .privacy, command: []), // native Swift
+        .init(id: "hosts-file",      title: "/etc/hosts",          symbol: "doc.text",                  group: .privacy,      command: []), // native Swift
+
+        // Backup
+        .init(id: "time-machine",    title: "Time Machine & Snapshots", symbol: "clock.arrow.circlepath", group: .backup,    command: []), // native Swift
 
         // Network
         .init(id: "wifi",            title: "Wi-Fi Diagnostics",   symbol: "wifi",                      group: .network,      command: ["wifi"]),
