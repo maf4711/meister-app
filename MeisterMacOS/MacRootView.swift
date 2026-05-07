@@ -63,6 +63,16 @@ struct MacRootView: View {
                 HardwareInventoryView()
             case "default-apps":
                 DefaultAppsView()
+            case "keychain-audit":
+                KeychainAuditView()
+            case "ssh-keys":
+                SSHKeysView()
+            case "ssd-health":
+                SSDHealthView()
+            case "tag-manager":
+                TagManagerView()
+            case "undo-cleanup":
+                UndoCleanupView()
             default:
                 BashOutputView(module: module)
             }
