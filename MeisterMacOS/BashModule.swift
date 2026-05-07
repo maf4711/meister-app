@@ -41,6 +41,7 @@ struct BashModule: Identifiable, Hashable {
 
     static let all: [BashModule] = [
         // Overview
+        .init(id: "dashboard",       title: "Dashboard",           symbol: "square.grid.2x2.fill",      group: .overview,     command: []), // native Swift, Apple Design 2026
         .init(id: "health-score",    title: "Health Score",        symbol: "heart.text.square.fill",    group: .overview,     command: []), // native Swift
         .init(id: "health",          title: "Health Dashboard",    symbol: "heart.text.square",         group: .overview,     command: ["-H"]),
         .init(id: "menu",            title: "TUI Menu",            symbol: "list.bullet.rectangle",     group: .overview,     command: ["menu"], runsLive: true),
@@ -89,6 +90,8 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "sniffnet",        title: "Sniffnet Monitor",    symbol: "waveform.path.ecg",         group: .network,      command: ["-N"], runsLive: true),
 
         // Hardware
+        .init(id: "energy-impact",   title: "Energy Impact",       symbol: "bolt.heart",                group: .hardware,     command: []), // native Swift
+        .init(id: "usb-devices",     title: "USB Devices",         symbol: "cable.connector",           group: .hardware,     command: []), // native Swift
         .init(id: "battery",         title: "Battery Health",      symbol: "battery.75",                group: .hardware,     command: ["battery"]),
         .init(id: "thermal",         title: "Thermal",             symbol: "thermometer.medium",        group: .hardware,     command: ["thermal", "1"]),
         .init(id: "performance",     title: "Performance Check",   symbol: "speedometer",               group: .hardware,     command: ["-P", "-n"]),

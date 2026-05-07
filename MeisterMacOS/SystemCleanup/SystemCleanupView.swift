@@ -61,6 +61,7 @@ final class SystemCleanupModel: ObservableObject {
 struct SystemCleanupView: View {
     @StateObject private var model = SystemCleanupModel()
     @State private var showConfirm = false
+    @State private var celebrate = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -71,8 +72,12 @@ struct SystemCleanupView: View {
             footer
         }
         .background(MD3.SemColor.background)
+        .sparkleBurst(trigger: celebrate, color: MD3.SemColor.success)
         .task {
             if model.scans.isEmpty { await model.scan() }
+        }
+        .onChange(of: model.lastManifest?.totalReclaimedBytes) { _, new in
+            if (new ?? 0) > 0 { celebrate.toggle() }
         }
         .alert("Send selected items to Trash?",
                isPresented: $showConfirm) {

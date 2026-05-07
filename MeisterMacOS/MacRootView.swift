@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MacRootView: View {
-    @State private var selection: BashModule.ID = BashModule.all.first?.id ?? ""
+    @State private var selection: BashModule.ID = "dashboard"
 
     var body: some View {
         NavigationSplitView {
@@ -29,6 +29,8 @@ struct MacRootView: View {
     private var detail: some View {
         if let module = BashModule.all.first(where: { $0.id == selection }) {
             switch module.id {
+            case "dashboard":
+                DashboardView()
             case "addressbook":
                 AddressBookCleanupView()
             case "system-cleanup":
@@ -51,6 +53,10 @@ struct MacRootView: View {
                 TimeMachineView()
             case "health-score":
                 HealthScoreView()
+            case "energy-impact":
+                EnergyImpactView()
+            case "usb-devices":
+                USBDevicesView()
             default:
                 BashOutputView(module: module)
             }
