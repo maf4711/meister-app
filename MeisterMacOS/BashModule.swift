@@ -54,6 +54,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "launch-agent",    title: "Install LaunchAgent", symbol: "clock.arrow.circlepath",    group: .maintenance,  command: ["-I"],   runsLive: true, destructive: true),
 
         // Storage & Cleanup
+        .init(id: "quick-clean",     title: "Quick Clean",         symbol: "wand.and.stars",            group: .storage,      command: []), // native Swift, one-click
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
         .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
         .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
@@ -101,7 +102,12 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "thermal",         title: "Thermal",             symbol: "thermometer.medium",        group: .hardware,     command: ["thermal", "1"]),
         .init(id: "performance",     title: "Performance Check",   symbol: "speedometer",               group: .hardware,     command: ["-P", "-n"]),
 
-        // Mac Tools
+        // Mac Tools — native dev-tool integrations
+        .init(id: "xcode-switcher",  title: "Xcode Switcher",      symbol: "hammer.fill",               group: .macTools,     command: []), // native Swift
+        .init(id: "simulator-manager", title: "Simulator Manager", symbol: "iphone.gen2.circle",        group: .macTools,     command: []), // native Swift
+        .init(id: "docker-cleanup",  title: "Docker Cleanup",      symbol: "shippingbox.and.arrow.backward", group: .macTools, command: []), // native Swift
+        .init(id: "brew-doctor",     title: "Brew Doctor",         symbol: "stethoscope",               group: .macTools,     command: []), // native Swift
+        .init(id: "rosetta-audit",   title: "Rosetta Audit",       symbol: "rectangle.on.rectangle",    group: .macTools,     command: []), // native Swift
         .init(id: "rosetta",         title: "Install Rosetta",     symbol: "apple.terminal",            group: .macTools,     command: ["-rosetta"], runsLive: true, destructive: true),
         .init(id: "simfix",          title: "Simulator Fix",       symbol: "iphone.gen2",               group: .macTools,     command: ["simfix"], runsLive: true, destructive: true),
         .init(id: "reset-safari",    title: "Reset Safari",        symbol: "safari",                    group: .macTools,     command: ["-resetsafari"], runsLive: true, destructive: true),

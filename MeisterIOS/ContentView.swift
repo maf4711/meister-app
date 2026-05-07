@@ -4,14 +4,16 @@ import MeradOSDesign3
 struct ContentView: View {
     var body: some View {
         TabView {
+            IOSDashboardView()
+                .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
             PhotosCleanerView()
                 .tabItem { Label("Photos", systemImage: "photo.on.rectangle.angled") }
             ContactsCleanerView()
                 .tabItem { Label("Contacts", systemImage: "person.2") }
             StorageView()
                 .tabItem { Label("Storage", systemImage: "internaldrive") }
-            CalendarCleanerView()
-                .tabItem { Label("Calendar", systemImage: "calendar") }
+            IOSHardwareView()
+                .tabItem { Label("Hardware", systemImage: "gearshape.2") }
             DiagnosticsView()
                 .tabItem { Label("Diagnostics", systemImage: "waveform.path.ecg") }
         }
