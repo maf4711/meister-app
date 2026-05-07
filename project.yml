@@ -26,7 +26,7 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GENERATE_INFOPLIST_FILE: YES
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "17"
+    CURRENT_PROJECT_VERSION: "18"
 
 targets:
   # iPhone + iPad (adaptive SwiftUI) + Mac Catalyst
@@ -95,6 +95,10 @@ targets:
         CFBundleLocalizations:
           - en
           - de
+        CFBundleURLTypes:
+          - CFBundleURLName: com.merados.meister.url
+            CFBundleURLSchemes:
+              - meister
     settings:
       base:
         PRODUCT_NAME: Meister
