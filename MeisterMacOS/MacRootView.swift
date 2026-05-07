@@ -28,10 +28,12 @@ struct MacRootView: View {
     @ViewBuilder
     private var detail: some View {
         if let module = BashModule.all.first(where: { $0.id == selection }) {
-            if module.id == "addressbook" {
-                // Native Swift — does not shell out
+            switch module.id {
+            case "addressbook":
                 AddressBookCleanupView()
-            } else {
+            case "system-cleanup":
+                SystemCleanupView()
+            default:
                 BashOutputView(module: module)
             }
         } else {
