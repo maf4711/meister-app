@@ -57,6 +57,12 @@ struct MacRootView: View {
                 EnergyImpactView()
             case "usb-devices":
                 USBDevicesView()
+            case "cleanup-history":
+                CleanupHistoryView()
+            case "hardware-inventory":
+                HardwareInventoryView()
+            case "default-apps":
+                DefaultAppsView()
             default:
                 BashOutputView(module: module)
             }

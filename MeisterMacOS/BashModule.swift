@@ -90,6 +90,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "sniffnet",        title: "Sniffnet Monitor",    symbol: "waveform.path.ecg",         group: .network,      command: ["-N"], runsLive: true),
 
         // Hardware
+        .init(id: "hardware-inventory", title: "Hardware Inventory", symbol: "gearshape.2",             group: .hardware,     command: []), // native Swift
         .init(id: "energy-impact",   title: "Energy Impact",       symbol: "bolt.heart",                group: .hardware,     command: []), // native Swift
         .init(id: "usb-devices",     title: "USB Devices",         symbol: "cable.connector",           group: .hardware,     command: []), // native Swift
         .init(id: "battery",         title: "Battery Health",      symbol: "battery.75",                group: .hardware,     command: ["battery"]),
@@ -103,6 +104,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "spotlight-fix",   title: "Spotlight Repair",    symbol: "magnifyingglass.circle",    group: .macTools,     command: ["-spotOK"], runsLive: true, destructive: true),
         .init(id: "desktop-fix",     title: "Organize Desktop",    symbol: "square.grid.3x3.topleft.filled", group: .macTools, command: ["-organise_desktop_fix"], runsLive: true, destructive: true),
         .init(id: "moncon",          title: "Monitor Controller",  symbol: "display",                   group: .macTools,     command: ["-moncon"]),
+        .init(id: "default-apps",    title: "Default Apps",        symbol: "app.badge",                 group: .macTools,     command: []), // native Swift
 
         // Data
         .init(id: "addressbook",     title: "AddressBook Cleanup", symbol: "externaldrive.badge.exclamationmark", group: .dataTools, command: []), // native Swift

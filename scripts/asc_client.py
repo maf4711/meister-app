@@ -223,17 +223,22 @@ def invite_tester(app_id: str, email: str, first: str = "", last: str = "", grou
     if existing:
         tester = existing[0]
     else:
-        rel: dict = {"apps": {"data": [{"type": "apps", "id": app_id}]}}
+        # ASC API rule: on CREATE, only `betaGroups` may be set as a relationship.
+        # The app association is derived from the group. Tester gets attached to
+        # the app implicitly when added to one of its beta groups.
+        rel: dict = {}
         if group_id:
             rel["betaGroups"] = {"data": [{"type": "betaGroups", "id": group_id}]}
+        body: dict = {
+            "data": {
+                "type": "betaTesters",
+                "attributes": {"email": email, "firstName": first, "lastName": last},
+            }
+        }
+        if rel:
+            body["data"]["relationships"] = rel
         try:
-            created = request("POST", "/betaTesters", body={
-                "data": {
-                    "type": "betaTesters",
-                    "attributes": {"email": email, "firstName": first, "lastName": last},
-                    "relationships": rel,
-                }
-            })
+            created = request("POST", "/betaTesters", body=body)
             tester = created["data"]
         except urllib.error.HTTPError as e:
             if e.code == 409:
@@ -253,6 +258,30 @@ def invite_tester(app_id: str, email: str, first: str = "", last: str = "", grou
         except urllib.error.HTTPError:
             pass  # Already in group — ignore.
     return tester
+
+
+def invite_team_user(email: str, first: str, last: str, app_id: str,
+                     role: str = "MARKETING") -> dict:
+    """Invite a user to the App Store Connect team with limited app visibility.
+    Required so the user can be added to a TestFlight Internal group (Apple
+    restricts Internal groups to ASC team members)."""
+    body: dict = {
+        "data": {
+            "type": "userInvitations",
+            "attributes": {
+                "email": email,
+                "firstName": first,
+                "lastName": last,
+                "roles": [role],
+                "allAppsVisible": False,
+                "provisioningAllowed": False,
+            },
+            "relationships": {
+                "visibleApps": {"data": [{"type": "apps", "id": app_id}]},
+            },
+        }
+    }
+    return request("POST", "/userInvitations", body=body)
 
 
 def submit_for_beta_review(build_id: str) -> dict:
@@ -355,6 +384,13 @@ def main() -> int:
     p_invite.add_argument("--last", default="")
     p_invite.add_argument("--group", default="Internal", help="Group name (Internal/External Beta)")
 
+    p_team = sub.add_parser("invite-team", help="Invite a user to the ASC team (required for TestFlight Internal access)")
+    p_team.add_argument("email")
+    p_team.add_argument("--first", required=True)
+    p_team.add_argument("--last", required=True)
+    p_team.add_argument("--role", default="MARKETING",
+                         choices=["MARKETING", "DEVELOPER", "APP_MANAGER", "CUSTOMER_SUPPORT"])
+
     p_setup = sub.add_parser("setup-beta-info", help="Set Beta App Description + feedback email (required for external review)")
     p_setup.add_argument("--description", required=True)
     p_setup.add_argument("--feedback-email", required=True)
@@ -407,6 +443,12 @@ def main() -> int:
         build = wait_until_processed(app_id, args.version)
         set_release_notes(build["id"], text)
         print(f"notes set on build {build['id']} ({len(text)} chars)")
+        return 0
+
+    if args.cmd == "invite-team":
+        result = invite_team_user(args.email, args.first, args.last, app_id, args.role)
+        invitation_id = result.get("data", {}).get("id", "?")
+        print(f"team invitation sent → {args.email} as {args.role}, ID {invitation_id}")
         return 0
 
     if args.cmd == "invite":
