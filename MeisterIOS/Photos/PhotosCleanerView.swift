@@ -154,7 +154,7 @@ struct PhotosCleanerView: View {
                 title: "Photos Access",
                 systemImage: "photo.on.rectangle.angled",
                 message: "Meister scans your library on-device to find duplicates, screenshots, and blurry photos. Nothing is uploaded.",
-                isGranted: permissions.isPhotosAuthorized,
+                state: permissions.photosGateState,
                 request: { await permissions.requestPhotosAccess() }
             ) {
                 content
@@ -433,9 +433,12 @@ struct AssetSelectionView: View {
 }
 
 /// A single row with a thumbnail + metadata, loaded lazily via PhotoKit.
+/// Tapping the thumbnail shows a full-screen preview (Justin's request).
 struct AssetThumbnailRow: View {
     let item: PhotoItem
     @State private var thumbnail: UIImage?
+    @State private var fullImage: UIImage?
+    @State private var showFullscreen = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -450,6 +453,8 @@ struct AssetThumbnailRow: View {
             }
             .frame(width: 52, height: 52)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .onTapGesture { showFullscreen = true }
+            .accessibilityLabel("Tap to view full size")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.creationDate?.formatted(date: .abbreviated, time: .shortened) ?? "Unknown Date")
@@ -465,5 +470,45 @@ struct AssetThumbnailRow: View {
             )
         }
         .accessibilityElement(children: .combine)
+        .sheet(isPresented: $showFullscreen) {
+            FullscreenPhotoView(item: item)
+        }
+    }
+}
+
+/// Full-screen photo viewer shown when tapping a thumbnail.
+private struct FullscreenPhotoView: View {
+    let item: PhotoItem
+    @State private var fullImage: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            if let img = fullImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFit()
+                    .ignoresSafeArea()
+                    .onTapGesture { dismiss() }
+            } else {
+                ProgressView()
+                    .tint(.white)
+            }
+        }
+        .task {
+            fullImage = await PhotoThumbnailLoader.thumbnail(
+                for: item.asset,
+                size: CGSize(width: 1200, height: 1200)
+            )
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(20)
+            }
+        }
     }
 }

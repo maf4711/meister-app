@@ -34,13 +34,19 @@ struct IOSHardwareView: View {
                                 ("RAM", Int64(s.physicalMemoryBytes).humanBytes),
                                 ("Architektur", architecture()),
                             ])
-                    section("Energie", icon: batteryIcon(s),
-                            rows: [
-                                ("Akku-Stand", s.batteryLevel < 0 ? "—" : "\(Int(s.batteryLevel * 100))%"),
-                                ("Status", s.batteryState.label),
-                                ("Low Power Mode", ProcessInfo.processInfo.isLowPowerModeEnabled ? "an" : "aus"),
-                                ("Thermal", thermalState()),
-                            ])
+                    section("Energie", icon: s.hasBattery ? batteryIcon(s) : "powerplug.fill",
+                            rows: s.hasBattery
+                                ? [
+                                    ("Akku-Stand", s.batteryLevel < 0 ? "—" : "\(Int(s.batteryLevel * 100))%"),
+                                    ("Status", s.batteryState.label),
+                                    ("Low Power Mode", ProcessInfo.processInfo.isLowPowerModeEnabled ? "an" : "aus"),
+                                    ("Thermal", thermalState()),
+                                  ]
+                                : [
+                                    ("Quelle", "Netzstrom"),
+                                    ("Hinweis", "Mac hat keinen Akku — UIDevice-Werte spiegeln keine reale Hardware"),
+                                    ("Thermal", thermalState()),
+                                  ])
                     section("Bildschirm", icon: "display",
                             rows: screenRows())
                 } else {

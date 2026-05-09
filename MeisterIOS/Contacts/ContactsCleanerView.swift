@@ -93,7 +93,7 @@ struct ContactsCleanerView: View {
                 title: "Contacts Access",
                 systemImage: "person.2",
                 message: "Meister finds duplicate contacts and merges them locally. Nothing is uploaded.",
-                isGranted: permissions.isContactsAuthorized,
+                state: permissions.contactsGateState,
                 request: { await permissions.requestContactsAccess() }
             ) {
                 content

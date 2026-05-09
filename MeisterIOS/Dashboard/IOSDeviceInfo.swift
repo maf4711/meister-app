@@ -13,6 +13,7 @@ struct IOSDeviceSnapshot: Equatable {
     let uptimeSeconds: Int64
     let batteryLevel: Float          // 0...1, -1 if unknown
     let batteryState: UIDevice.BatteryState
+    let hasBattery: Bool             // false on Mac runtimes — battery readings are fake there
     let runtimeKind: RuntimeKind
 
     enum RuntimeKind: String, Equatable {
@@ -73,9 +74,24 @@ actor IOSDeviceReader {
         let cpu = ProcessInfo.processInfo.processorCount
         let uptime = Int64(ProcessInfo.processInfo.systemUptime)
 
-        await MainActor.run { device.isBatteryMonitoringEnabled = true }
-        let level = await MainActor.run { device.batteryLevel }
-        let state = await MainActor.run { device.batteryState }
+        // On Mac runtimes (iOS-app-on-Mac and Catalyst) UIDevice's battery
+        // properties return spurious values — Justin reported "1% / Voll"
+        // because the Mac mini has no battery and the iOS shim invents data.
+        // Skip battery monitoring entirely on Mac runtimes.
+        let hasBattery = (runtime == .iPhone || runtime == .iPad)
+        let level: Float
+        let state: UIDevice.BatteryState
+        if hasBattery {
+            await MainActor.run { device.isBatteryMonitoringEnabled = true }
+            // First read after enabling monitoring is sometimes -1; brief wait
+            // gives the system a chance to sample.
+            try? await Task.sleep(for: .milliseconds(100))
+            level = await MainActor.run { device.batteryLevel }
+            state = await MainActor.run { device.batteryState }
+        } else {
+            level = -1
+            state = .unknown
+        }
 
         return IOSDeviceSnapshot(
             modelName: modelName,
@@ -89,6 +105,7 @@ actor IOSDeviceReader {
             uptimeSeconds: uptime,
             batteryLevel: level,
             batteryState: state,
+            hasBattery: hasBattery,
             runtimeKind: runtime
         )
     }

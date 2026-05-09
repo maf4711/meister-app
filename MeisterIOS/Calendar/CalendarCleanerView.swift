@@ -65,7 +65,7 @@ struct CalendarCleanerView: View {
                 title: "Calendar Access",
                 systemImage: "calendar",
                 message: "Meister helps archive old events and remove empty calendars. Changes stay on this device and sync through iCloud like any Calendar edit.",
-                isGranted: permissions.isCalendarAuthorized,
+                state: permissions.calendarGateState,
                 request: { await permissions.requestCalendarAccess() }
             ) {
                 content
