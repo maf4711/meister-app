@@ -23,6 +23,30 @@ final class PermissionManager {
         calendarStatus == .fullAccess || calendarStatus == .writeOnly || calendarStatus == .authorized
     }
 
+    var photosGateState: PermissionState {
+        switch photosStatus {
+        case .authorized, .limited: return .granted
+        case .denied, .restricted:  return .denied
+        default:                    return .notDetermined
+        }
+    }
+
+    var contactsGateState: PermissionState {
+        switch contactsStatus {
+        case .authorized:           return .granted
+        case .denied, .restricted:  return .denied
+        default:                    return .notDetermined
+        }
+    }
+
+    var calendarGateState: PermissionState {
+        switch calendarStatus {
+        case .fullAccess, .writeOnly, .authorized: return .granted
+        case .denied, .restricted:                 return .denied
+        default:                                   return .notDetermined
+        }
+    }
+
     private init() { refresh() }
 
     func refresh() {

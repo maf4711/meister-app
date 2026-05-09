@@ -140,6 +140,18 @@ struct MacRootView: View {
                 StorageForecastView()
             case "slack-webhook":
                 SlackWebhookView()
+            case "disk-map":
+                DiskMapView()
+            case "process-manager":
+                ProcessManagerView()
+            case "network-connections":
+                NetworkConnectionsView()
+            case "system-updates":
+                SystemUpdatesView()
+            case "code-signature":
+                CodeSignatureView()
+            case "dns-flush":
+                DNSFlushView()
             default:
                 BashOutputView(module: module)
             }

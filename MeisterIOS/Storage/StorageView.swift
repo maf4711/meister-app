@@ -28,6 +28,9 @@ struct StorageView: View {
     @State private var model = StorageViewModel()
     @State private var isConfirmingClear = false
     @State private var reportURL: URL?
+    @State private var isExporting = false
+    @State private var exportError: String?
+    @State private var showExportShare = false
 
     var body: some View {
         NavigationStack {
@@ -51,8 +54,13 @@ struct StorageView: View {
                     Button {
                         exportReport()
                     } label: {
-                        Label("Export PDF Report", systemImage: "doc.richtext")
+                        if isExporting {
+                            HStack { ProgressView().controlSize(.small); Text("PDF wird erzeugt…") }
+                        } else {
+                            Label("Export PDF Report", systemImage: "doc.richtext")
+                        }
                     }
+                    .disabled(isExporting)
                     if let reportURL {
                         ShareLink(item: reportURL) {
                             Label("Share Last Report", systemImage: "square.and.arrow.up")
@@ -75,9 +83,9 @@ struct StorageView: View {
                     }
                     .disabled(model.cacheBytes == 0)
                 } header: {
-                    Text("App Data")
+                    Text("Meister-eigener App-Cache")
                 } footer: {
-                    Text("Only removes data inside Meister's own sandbox. Your photos and contacts are untouched.")
+                    Text("Bezieht sich nur auf den App-Cache hier in dieser Sektion — Meisters interner Sandbox-Cache (temporäre Scan-Daten). Foto-Bibliothek, Kontakte und das Gerät bleiben unangetastet.")
                 }
             }
             .navigationTitle("Storage")
@@ -94,7 +102,28 @@ struct StorageView: View {
             } message: {
                 Text("Temporary files inside Meister are removed. Scans rerun the next time you open a tab.")
             }
+            .sheet(isPresented: $showExportShare) {
+                if let url = reportURL {
+                    ShareSheet(url: url)
+                }
+            }
+            .alert("PDF Export fehlgeschlagen", isPresented: Binding(
+                get: { exportError != nil },
+                set: { if !$0 { exportError = nil } }
+            )) {
+                Button("OK") { exportError = nil }
+            } message: {
+                Text(exportError ?? "")
+            }
         }
+    }
+
+    private struct ShareSheet: UIViewControllerRepresentable {
+        let url: URL
+        func makeUIViewController(context: Context) -> UIActivityViewController {
+            UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        }
+        func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
     }
 
     private var storageHeader: some View {
@@ -123,23 +152,33 @@ struct StorageView: View {
     }
 
     private func exportReport() {
-        let info = model.info
-        let report = CleanupReport(
-            generatedAt: .now,
-            deviceInfo: UIDevice.current.model,
-            sections: [
-                CleanupReport.Section(title: "Device Storage", rows: [
-                    ("Used", ByteSize.formatted(info.used)),
-                    ("Free", ByteSize.formatted(info.free)),
-                    ("Total", ByteSize.formatted(info.total)),
-                    ("Utilization", "\(Int(info.usedRatio * 100))%"),
-                ]),
-                CleanupReport.Section(title: "Meister Data", rows: [
-                    ("App Cache", ByteSize.formatted(model.cacheBytes)),
-                ]),
-            ]
-        )
-        reportURL = try? report.renderPDF()
+        isExporting = true
+        Task { @MainActor in
+            defer { isExporting = false }
+            let info = model.info
+            let report = CleanupReport(
+                generatedAt: .now,
+                deviceInfo: UIDevice.current.model,
+                sections: [
+                    CleanupReport.Section(title: "Device Storage", rows: [
+                        ("Used", ByteSize.formatted(info.used)),
+                        ("Free", ByteSize.formatted(info.free)),
+                        ("Total", ByteSize.formatted(info.total)),
+                        ("Utilization", "\(Int(info.usedRatio * 100))%"),
+                    ]),
+                    CleanupReport.Section(title: "Meister Data", rows: [
+                        ("App Cache", ByteSize.formatted(model.cacheBytes)),
+                    ]),
+                ]
+            )
+            do {
+                let url = try report.renderPDF()
+                reportURL = url
+                showExportShare = true
+            } catch {
+                exportError = error.localizedDescription
+            }
+        }
     }
 
     private var gaugeTint: Color {

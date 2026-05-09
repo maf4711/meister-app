@@ -93,6 +93,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "icloud-sync",     title: "iCloud Drive",        symbol: "icloud",                    group: .backup,      command: []), // native Swift
 
         // Network
+        .init(id: "dns-flush",        title: "DNS-Cache löschen",   symbol: "arrow.clockwise.circle.fill", group: .network,   command: []), // native Swift
         .init(id: "wifi",            title: "Wi-Fi Diagnostics",   symbol: "wifi",                      group: .network,      command: ["wifi"]),
         .init(id: "ports",           title: "Open Ports",          symbol: "lock.open",                 group: .network,      command: ["ports"]),
         .init(id: "dns",             title: "DNS Leak Test",       symbol: "globe",                     group: .network,      command: ["dns"]),
@@ -106,6 +107,11 @@ struct BashModule: Identifiable, Hashable {
         // Hardware
         .init(id: "hardware-inventory", title: "Hardware Inventory", symbol: "gearshape.2",             group: .hardware,     command: []), // native Swift
         .init(id: "ssd-health",      title: "Disk Health (SMART)", symbol: "stethoscope",               group: .hardware,     command: []), // native Swift
+        .init(id: "disk-map",        title: "Disk Map",            symbol: "squareshape.split.3x3",     group: .hardware,     command: []), // native Swift
+        .init(id: "process-manager", title: "Prozess-Manager",     symbol: "cpu.fill",                  group: .hardware,     command: []), // native Swift
+        .init(id: "network-connections", title: "Network Connections", symbol: "arrow.left.arrow.right", group: .network,    command: []), // native Swift
+        .init(id: "system-updates",  title: "System Updates",      symbol: "arrow.down.app",            group: .maintenance,  command: []), // native Swift
+        .init(id: "code-signature",  title: "Code Signature",      symbol: "checkmark.seal",            group: .macTools,     command: []), // native Swift
         .init(id: "memory-pressure", title: "Memory Pressure (Live)", symbol: "memorychip.fill",        group: .hardware,     command: []), // native Swift, live
         .init(id: "bluetooth-devices", title: "Bluetooth Devices", symbol: "antenna.radiowaves.left.and.right", group: .hardware, command: []), // native Swift
         .init(id: "energy-impact",   title: "Energy Impact",       symbol: "bolt.heart",                group: .hardware,     command: []), // native Swift

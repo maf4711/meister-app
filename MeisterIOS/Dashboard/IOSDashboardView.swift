@@ -108,9 +108,15 @@ struct IOSDashboardView: View {
                 tile("RAM", icon: "memorychip",
                      primary: Int64(s.physicalMemoryBytes).humanBytes,
                      secondary: "\(s.processorCount) Cores")
-                tile("Battery", icon: batteryIcon(s),
-                     primary: s.batteryLevel < 0 ? "—" : "\(Int(s.batteryLevel * 100))%",
-                     secondary: s.batteryState.label)
+                if s.hasBattery {
+                    tile("Battery", icon: batteryIcon(s),
+                         primary: s.batteryLevel < 0 ? "—" : "\(Int(s.batteryLevel * 100))%",
+                         secondary: s.batteryState.label)
+                } else {
+                    tile("Power", icon: "powerplug.fill",
+                         primary: "Netzstrom",
+                         secondary: "Mac hat keinen Akku")
+                }
                 tile("Uptime", icon: "clock",
                      primary: formatUptime(s.uptimeSeconds),
                      secondary: "seit letztem Neustart")
