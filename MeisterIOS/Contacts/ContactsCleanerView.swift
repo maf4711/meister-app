@@ -306,12 +306,21 @@ extension CNContact: Identifiable {
 /// SwiftUI wrapper around CNContactViewController. Read-only, no editing —
 /// the goal is just to inspect what's stored, especially when comparing
 /// duplicates side-by-side before a merge.
+///
+/// Tom Build 33: tapping the magnifying glass crashed the app. Cause:
+/// `ContactScanner.keys` only fetches name/phone/email/thumbnail to keep the
+/// dedup scan fast, but `CNContactViewController(for:)` reads ~30 fields
+/// (postal addresses, dates, social profiles, IM accounts, related names…)
+/// and force-unwraps any that weren't part of the original fetch — instant
+/// crash. Fix: re-fetch the single contact by identifier with the view
+/// controller's own descriptor on demand.
 struct ContactPreviewSheet: UIViewControllerRepresentable {
     let contact: CNContact
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UINavigationController {
-        let vc = CNContactViewController(for: contact)
+        let fullContact = Self.refetch(contact) ?? contact
+        let vc = CNContactViewController(for: fullContact)
         vc.allowsEditing = false
         vc.allowsActions = false
         vc.contactStore = CNContactStore()
@@ -327,6 +336,14 @@ struct ContactPreviewSheet: UIViewControllerRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(dismiss: { dismiss() })
+    }
+
+    private static func refetch(_ contact: CNContact) -> CNContact? {
+        let store = CNContactStore()
+        let keys: [CNKeyDescriptor] = [
+            CNContactViewController.descriptorForRequiredKeys(),
+        ]
+        return try? store.unifiedContact(withIdentifier: contact.identifier, keysToFetch: keys)
     }
 
     final class Coordinator: NSObject {
