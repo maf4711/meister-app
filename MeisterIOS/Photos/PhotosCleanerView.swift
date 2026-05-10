@@ -445,6 +445,14 @@ struct AssetThumbnailRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // Thumbnail itself does NOT capture taps anymore — when this row
+            // sits inside an .editMode(.active) List (Screenshots, Blurry,
+            // Large Media), the selection mechanism intercepts row taps and
+            // a per-thumbnail .onTapGesture never fires. Tom: "Bau mal die
+            // Foto Preview rein, damit man sehen kann was genau auf dem
+            // Foto drauf ist" — he was tapping the thumbnail and nothing
+            // happened. Solution: dedicated magnifying-glass button to the
+            // right that opens fullscreen explicitly.
             Group {
                 if let thumbnail {
                     Image(uiImage: thumbnail)
@@ -456,18 +464,6 @@ struct AssetThumbnailRow: View {
             }
             .frame(width: thumbSize, height: thumbSize)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(alignment: .bottomTrailing) {
-                // Subtle hint that the thumbnail is tappable.
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.caption2)
-                    .foregroundStyle(.white)
-                    .padding(4)
-                    .background(.black.opacity(0.55), in: Circle())
-                    .padding(4)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { showFullscreen = true }
-            .accessibilityLabel("Tap to view full size")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.creationDate?.formatted(date: .abbreviated, time: .shortened) ?? "Unknown Date")
@@ -475,6 +471,22 @@ struct AssetThumbnailRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Spacer()
+
+            // Explicit preview button — works in both editMode lists and
+            // plain lists. .buttonStyle(.borderless) keeps it from claiming
+            // the whole row.
+            Button {
+                showFullscreen = true
+            } label: {
+                Image(systemName: "magnifyingglass.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 4)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Vorschau in voller Größe")
         }
         .task {
             thumbnail = await PhotoThumbnailLoader.thumbnail(
