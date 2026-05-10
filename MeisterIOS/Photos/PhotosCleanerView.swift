@@ -433,12 +433,15 @@ struct AssetSelectionView: View {
 }
 
 /// A single row with a thumbnail + metadata, loaded lazily via PhotoKit.
-/// Tapping the thumbnail shows a full-screen preview (Justin's request).
+/// Tapping the thumbnail shows a full-screen preview (Tom's "Vorschau ist
+/// ja winzig" request — bigger thumbnail + pinch-zoom in fullscreen).
 struct AssetThumbnailRow: View {
     let item: PhotoItem
     @State private var thumbnail: UIImage?
-    @State private var fullImage: UIImage?
     @State private var showFullscreen = false
+
+    /// Bumped from 52→88 so the in-list preview is actually usable.
+    private let thumbSize: CGFloat = 88
 
     var body: some View {
         HStack(spacing: 12) {
@@ -451,8 +454,18 @@ struct AssetThumbnailRow: View {
                     Color(uiColor: .secondarySystemFill)
                 }
             }
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(width: thumbSize, height: thumbSize)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(alignment: .bottomTrailing) {
+                // Subtle hint that the thumbnail is tappable.
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.caption2)
+                    .foregroundStyle(.white)
+                    .padding(4)
+                    .background(.black.opacity(0.55), in: Circle())
+                    .padding(4)
+            }
+            .contentShape(Rectangle())
             .onTapGesture { showFullscreen = true }
             .accessibilityLabel("Tap to view full size")
 
@@ -466,21 +479,31 @@ struct AssetThumbnailRow: View {
         .task {
             thumbnail = await PhotoThumbnailLoader.thumbnail(
                 for: item.asset,
-                size: CGSize(width: 104, height: 104)
+                size: CGSize(width: thumbSize * 2, height: thumbSize * 2)
             )
         }
         .accessibilityElement(children: .combine)
-        .sheet(isPresented: $showFullscreen) {
+        .fullScreenCover(isPresented: $showFullscreen) {
             FullscreenPhotoView(item: item)
         }
     }
 }
 
 /// Full-screen photo viewer shown when tapping a thumbnail.
+/// Pinch-to-zoom + drag-to-pan + double-tap-to-toggle-zoom + tap-to-dismiss
+/// (only when not zoomed). Loads at full asset resolution, falling back to
+/// a 1600px preview while the original streams.
 private struct FullscreenPhotoView: View {
     let item: PhotoItem
     @State private var fullImage: UIImage?
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
     @Environment(\.dismiss) private var dismiss
+
+    private let minScale: CGFloat = 1.0
+    private let maxScale: CGFloat = 6.0
 
     var body: some View {
         ZStack {
@@ -489,25 +512,77 @@ private struct FullscreenPhotoView: View {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFit()
+                    .scaleEffect(scale)
+                    .offset(offset)
                     .ignoresSafeArea()
-                    .onTapGesture { dismiss() }
+                    .gesture(magnification)
+                    .simultaneousGesture(drag)
+                    .onTapGesture(count: 2) { toggleZoom() }
+                    .onTapGesture { if scale <= minScale + 0.01 { dismiss() } }
             } else {
-                ProgressView()
-                    .tint(.white)
+                ProgressView().tint(.white)
             }
         }
         .task {
             fullImage = await PhotoThumbnailLoader.thumbnail(
                 for: item.asset,
-                size: CGSize(width: 1200, height: 1200)
+                size: CGSize(width: 1600, height: 1600)
             )
         }
         .overlay(alignment: .topTrailing) {
             Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.85))
                     .padding(20)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            Text("\(item.pixelWidth) × \(item.pixelHeight) · \(ByteSize.formatted(item.sizeBytes))")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(20)
+        }
+    }
+
+    private var magnification: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                scale = min(maxScale, max(minScale, lastScale * value))
+            }
+            .onEnded { _ in
+                lastScale = scale
+                if scale <= minScale {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        offset = .zero
+                        lastOffset = .zero
+                    }
+                }
+            }
+    }
+
+    private var drag: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                guard scale > minScale else { return }
+                offset = CGSize(width: lastOffset.width + value.translation.width,
+                                height: lastOffset.height + value.translation.height)
+            }
+            .onEnded { _ in
+                lastOffset = offset
+            }
+    }
+
+    private func toggleZoom() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            if scale > minScale {
+                scale = minScale
+                lastScale = minScale
+                offset = .zero
+                lastOffset = .zero
+            } else {
+                scale = 2.5
+                lastScale = 2.5
             }
         }
     }
