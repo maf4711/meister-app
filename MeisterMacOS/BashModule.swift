@@ -54,7 +54,8 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "launch-agent",    title: "Install LaunchAgent", symbol: "clock.arrow.circlepath",    group: .maintenance,  command: ["-I"],   runsLive: true, destructive: true),
 
         // Storage & Cleanup
-        .init(id: "quick-clean",     title: "Quick Clean",         symbol: "wand.and.stars",            group: .storage,      command: []), // native Swift, one-click
+        .init(id: "auto-clean-all",  title: "Alles erledigen",     symbol: "wand.and.stars.inverse",    group: .storage,      command: []), // native Swift, one-click EVERYTHING
+        .init(id: "quick-clean",     title: "Quick Clean",         symbol: "wand.and.stars",            group: .storage,      command: []), // native Swift, system caches only
         .init(id: "autopilot",       title: "Autopilot",           symbol: "clock.arrow.2.circlepath",  group: .storage,      command: []), // native Swift, scheduler
         .init(id: "storage-forecast", title: "Storage Forecast",   symbol: "chart.line.uptrend.xyaxis", group: .storage,      command: []), // native Swift
         .init(id: "extended-attributes", title: "Extended Attrs",  symbol: "doc.badge.gearshape",       group: .storage,      command: []), // native Swift

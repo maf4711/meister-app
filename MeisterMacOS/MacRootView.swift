@@ -114,6 +114,8 @@ struct MacRootView: View {
                 RosettaAuditView()
             case "quick-clean":
                 QuickCleanView()
+            case "auto-clean-all":
+                AutoCleanAllView()
             case "extended-attributes":
                 ExtendedAttributesView()
             case "symlink-inspector":
