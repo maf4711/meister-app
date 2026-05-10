@@ -16,12 +16,32 @@ actor SpeedtestPro {
 
     static func loadHistory() -> [Result] {
         guard let data = UserDefaults.standard.data(forKey: "speedtestHistory") else { return [] }
-        return (try? JSONDecoder().decode([Result].self, from: data)) ?? []
+        let decoded = (try? JSONDecoder().decode([Result].self, from: data)) ?? []
+        // Tom on Build 30 still hit Speedtest crashes — even after ResumeBox.
+        // Likely culprit: old history rows from pre-fix builds contain
+        // .infinity or .nan in downloadMbps/uploadMbps because the
+        // measure functions used to divide by a sub-millisecond elapsed.
+        // Charts.framework crashes when LineMark gets a non-finite Y.
+        // Drop any row that has a non-finite component before returning.
+        return decoded.filter { row in
+            row.pingMs.isFinite && row.jitterMs.isFinite
+                && row.downloadMbps.isFinite && row.uploadMbps.isFinite
+        }
     }
 
     static func save(_ result: Result) {
         var history = loadHistory()
-        history.append(result)
+        // sanitize the new row too — defensive belt+braces, in case a future
+        // measurement bypasses the divide-by-zero guard.
+        let safe = Result(
+            id: result.id,
+            timestamp: result.timestamp,
+            pingMs: result.pingMs.isFinite ? result.pingMs : 0,
+            jitterMs: result.jitterMs.isFinite ? result.jitterMs : 0,
+            downloadMbps: result.downloadMbps.isFinite ? result.downloadMbps : 0,
+            uploadMbps: result.uploadMbps.isFinite ? result.uploadMbps : 0
+        )
+        history.append(safe)
         if history.count > 60 { history.removeFirst(history.count - 60) }
         if let data = try? JSONEncoder().encode(history) {
             UserDefaults.standard.set(data, forKey: "speedtestHistory")
