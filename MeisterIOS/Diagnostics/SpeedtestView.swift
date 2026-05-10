@@ -79,15 +79,23 @@ struct SpeedtestProView: View {
     }
 
     private func run() {
-        Task {
+        // Tom Build 33: speedtest still crashing. Root cause this round —
+        // the Task here had no isolation, so isRunning/current/history (all
+        // @State) were being mutated off the main actor. iOS 18's strict
+        // SwiftUI threading turns that into a runtime crash on first
+        // mutation. Pin the Task to MainActor and the off-main work to a
+        // detached child task that calls back through the @Sendable
+        // progress closure (already MainActor-hopped internally).
+        Task { @MainActor in
             isRunning = true
-            let engine = SpeedtestPro()
-            let result = await engine.run { p, v in
-                Task { @MainActor in phase = p; progress = v }
-            }
+            defer { isRunning = false }
+            let result = await Task.detached {
+                await SpeedtestPro().run { p, v in
+                    Task { @MainActor in phase = p; progress = v }
+                }
+            }.value
             current = result
             history = SpeedtestPro.loadHistory()
-            isRunning = false
         }
     }
 }
