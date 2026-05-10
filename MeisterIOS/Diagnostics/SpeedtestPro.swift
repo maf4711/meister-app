@@ -58,29 +58,64 @@ actor SpeedtestPro {
     private func measurePings(host: String, samples: Int) async -> [Double] {
         var results: [Double] = []
         for _ in 0..<samples {
-            results.append(await tcpPing(host: host))
+            let value = await tcpPing(host: host)
+            // Drop failed pings (-1 sentinel) so jitter/avg don't get poisoned.
+            if value >= 0 { results.append(value) }
         }
-        return results
+        // Guard against the all-failed case — return at least one row so the
+        // upstream avg/jitter math doesn't divide by zero.
+        return results.isEmpty ? [0] : results
     }
 
+    /// Returns latency in ms, or -1 if the connection failed / timed out.
+    /// The previous implementation called `continuation.resume()` from both
+    /// the `.ready` AND `.cancelled` branches — and `connection.cancel()`
+    /// triggers `.cancelled` immediately after `.ready` — which fatal-errored
+    /// the CheckedContinuation. This was Tom's "Speedtest stürzt immer noch
+    /// ab" crash. Resume-once flag + 3-second timeout fixes both:
+    /// - exactly one resume even on rapid state transitions
+    /// - never hangs forever on a blocked port
     private func tcpPing(host: String) async -> Double {
-        let start = Date()
-        let connection = NWConnection(host: .init(host), port: 443, using: .tcp)
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Double, Never>) in
+            let start = Date()
+            let connection = NWConnection(host: .init(host), port: 443, using: .tcp)
+
+            // Atomic resume guard. NWConnection state callbacks can fire from
+            // multiple queues and may transition .ready → .cancelled almost
+            // simultaneously when we call cancel(); we must only resume once.
+            let lock = NSLock()
+            var resumed = false
+            let resume: (Double) -> Void = { value in
+                lock.lock()
+                let alreadyResumed = resumed
+                resumed = true
+                lock.unlock()
+                guard !alreadyResumed else { return }
+                continuation.resume(returning: value)
+            }
+
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    continuation.resume()
+                    let elapsed = Date().timeIntervalSince(start) * 1000
+                    resume(elapsed)
                     connection.cancel()
                 case .failed, .cancelled:
-                    continuation.resume()
+                    resume(-1)
                 default:
                     break
                 }
             }
             connection.start(queue: DispatchQueue.global())
+
+            // Failsafe: if neither .ready nor .failed fires within 3 s, give up.
+            // Without this the test could hang forever on a blocked port and
+            // the CheckedContinuation would leak.
+            DispatchQueue.global().asyncAfter(deadline: .now() + 3.0) {
+                resume(-1)
+                connection.cancel()
+            }
         }
-        return Date().timeIntervalSince(start) * 1000
     }
 
     private func measureDownload(byteCount: Int) async -> Double {
