@@ -132,6 +132,7 @@ final class IOSAutoCleanModel: ObservableObject {
 
 struct IOSAutoCleanView: View {
     @StateObject private var model = IOSAutoCleanModel()
+    @StateObject private var launcher = AutoCleanLauncher.shared
     @State private var permissions = PermissionManager.shared
     @State private var showConfirm = false
 
@@ -155,6 +156,12 @@ struct IOSAutoCleanView: View {
                 }
             } message: {
                 Text("Photos: Duplikate (Kopien), Screenshots, Screen-Recordings, Blurry → 'Recently Deleted' (30 Tage rückholbar). App-Cache: Meisters eigene Sandbox. Kontakte werden NICHT zusammengeführt — ist zu riskant ohne Review.")
+            }
+            // Shortcuts intent path: skip the confirm sheet — the user already
+            // confirmed by saying "Hey Siri, Quick-Clean".
+            .task(id: launcher.pendingAutoStart) {
+                guard launcher.consume(), !model.isRunning else { return }
+                await model.run()
             }
         }
     }

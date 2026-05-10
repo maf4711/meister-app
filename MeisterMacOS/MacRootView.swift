@@ -154,6 +154,10 @@ struct MacRootView: View {
                 CodeSignatureView()
             case "dns-flush":
                 DNSFlushView()
+            case "spotlight-audit":
+                SpotlightIndexView()
+            case "crash-reports":
+                CrashReportsView()
             default:
                 BashOutputView(module: module)
             }
