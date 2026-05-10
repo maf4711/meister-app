@@ -27,8 +27,8 @@ struct CleanPhotosIntent: AppIntent {
     }
 }
 
-/// Exposes the intent as a suggested Shortcut so it appears in the Shortcuts app
-/// and can be triggered with a voice phrase.
+/// Single AppShortcutsProvider for the whole iOS target — Apple allows only
+/// one conformance per app, so all Siri/Shortcuts entry points live here.
 struct MeisterShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -39,6 +39,26 @@ struct MeisterShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Scan Photos",
             systemImageName: "photo.on.rectangle.angled"
+        )
+        AppShortcut(
+            intent: QuickCleanIntent(),
+            phrases: [
+                "Quick-Clean mit \(.applicationName)",
+                "\(.applicationName) Quick-Clean",
+                "\(.applicationName) aufräumen",
+            ],
+            shortTitle: "Quick-Clean",
+            systemImageName: "wand.and.stars"
+        )
+        AppShortcut(
+            intent: ShowHealthScoreIntent(),
+            phrases: [
+                "\(.applicationName) Health Score",
+                "Wie gesund ist mein iPhone laut \(.applicationName)?",
+                "\(.applicationName) Status",
+            ],
+            shortTitle: "Health Score",
+            systemImageName: "heart.text.square.fill"
         )
     }
 }

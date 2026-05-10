@@ -112,6 +112,8 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "process-manager", title: "Prozess-Manager",     symbol: "cpu.fill",                  group: .hardware,     command: []), // native Swift
         .init(id: "network-connections", title: "Network Connections", symbol: "arrow.left.arrow.right", group: .network,    command: []), // native Swift
         .init(id: "system-updates",  title: "System Updates",      symbol: "arrow.down.app",            group: .maintenance,  command: []), // native Swift
+        .init(id: "spotlight-audit", title: "Spotlight Index Audit", symbol: "magnifyingglass.circle.fill", group: .maintenance, command: []), // native Swift
+        .init(id: "crash-reports",   title: "Crash Reports",       symbol: "exclamationmark.octagon",   group: .maintenance,  command: []), // native Swift
         .init(id: "code-signature",  title: "Code Signature",      symbol: "checkmark.seal",            group: .macTools,     command: []), // native Swift
         .init(id: "memory-pressure", title: "Memory Pressure (Live)", symbol: "memorychip.fill",        group: .hardware,     command: []), // native Swift, live
         .init(id: "bluetooth-devices", title: "Bluetooth Devices", symbol: "antenna.radiowaves.left.and.right", group: .hardware, command: []), // native Swift
