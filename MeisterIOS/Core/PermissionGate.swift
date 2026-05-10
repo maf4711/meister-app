@@ -82,24 +82,23 @@ struct PermissionGate<Granted: View>: View {
                     .disabled(isRequesting)
                     .accessibilityHint("Opens the system authorization dialog.")
 
-                    // Tom report Build 29: "Kontakte Zugriff geht nicht".
-                    // Sometimes iOS suppresses the system dialog (Catalyst
-                    // configurations, prior denial cached by ProcessInfo
-                    // before our authorizationStatus check sees it, etc.) —
-                    // the user taps Grant Access and nothing visible
-                    // happens. Always offer a Settings escape hatch even
-                    // before the gate's internal state has flipped to
-                    // .denied so they're never stuck.
+                    // Tom Build 30: "NICHTS WURDE GEFIXT" — turns out the
+                    // borderless tertiary "stattdessen…" link from Build 30
+                    // was too easy to overlook. Promote to a full secondary
+                    // button so it has the same visual weight as Grant
+                    // Access. Some iOS configurations never present the
+                    // system dialog at all (Catalyst, prior cached denial)
+                    // — without a prominent escape, the user appears stuck.
                     Button {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     } label: {
-                        Text("Stattdessen in Einstellungen öffnen")
-                            .font(.footnote)
+                        Label("In Einstellungen öffnen", systemImage: "gearshape")
+                            .frame(maxWidth: 240)
                     }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(.bordered)
+                    .accessibilityHint("Falls der iOS-Dialog nicht erscheint, hier direkt zur Permission-Seite.")
                 }
             }
         case .denied:

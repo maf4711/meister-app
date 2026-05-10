@@ -110,7 +110,7 @@ struct IOSDashboardView: View {
                      secondary: "\(s.processorCount) Cores")
                 if s.hasBattery {
                     tile("Battery", icon: batteryIcon(s),
-                         primary: s.batteryLevel < 0 ? "—" : "\(Int(s.batteryLevel * 100))%",
+                         primary: s.batteryLevel < 0 ? "—" : "\(Int((s.batteryLevel * 100).rounded()))%",
                          secondary: s.batteryState.label)
                 } else {
                     tile("Power", icon: "powerplug.fill",
@@ -155,7 +155,7 @@ struct IOSDashboardView: View {
     private func batteryIcon(_ s: IOSDeviceSnapshot) -> String {
         if s.batteryState == .charging { return "battery.100.bolt" }
         if s.batteryLevel < 0 { return "battery.0" }
-        let pct = Int(s.batteryLevel * 100)
+        let pct = Int((s.batteryLevel * 100).rounded())
         switch pct {
         case 75...:  return "battery.100"
         case 50..<75: return "battery.75"

@@ -37,7 +37,7 @@ struct IOSHardwareView: View {
                     section("Energie", icon: s.hasBattery ? batteryIcon(s) : "powerplug.fill",
                             rows: s.hasBattery
                                 ? [
-                                    ("Akku-Stand", s.batteryLevel < 0 ? "—" : "\(Int(s.batteryLevel * 100))%"),
+                                    ("Akku-Stand", s.batteryLevel < 0 ? "—" : "\(Int((s.batteryLevel * 100).rounded()))%"),
                                     ("Status", s.batteryState.label),
                                     ("Low Power Mode", ProcessInfo.processInfo.isLowPowerModeEnabled ? "an" : "aus"),
                                     ("Thermal", thermalState()),
@@ -132,7 +132,7 @@ struct IOSHardwareView: View {
     private func batteryIcon(_ s: IOSDeviceSnapshot) -> String {
         if s.batteryState == .charging { return "battery.100.bolt" }
         if s.batteryLevel < 0 { return "battery.0" }
-        let pct = Int(s.batteryLevel * 100)
+        let pct = Int((s.batteryLevel * 100).rounded())
         switch pct {
         case 75...:   return "battery.100"
         case 50..<75: return "battery.75"
