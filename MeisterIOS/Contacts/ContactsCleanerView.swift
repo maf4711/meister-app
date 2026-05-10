@@ -1,6 +1,8 @@
 import Contacts
+import ContactsUI
 import Observation
 import SwiftUI
+import UIKit
 
 /// State + domain logic for the Contacts cleaner.
 @Observable
@@ -227,24 +229,43 @@ struct ContactGroupDetailView: View {
     let onMerge: (ContactGroup) -> Void
 
     @State private var isConfirmingMerge = false
+    @State private var previewContact: CNContact?
 
     var body: some View {
         List {
             ForEach(group.items) { item in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.fullName.isEmpty ? "No Name" : item.fullName)
-                        .fontWeight(.medium)
-                    if !item.phones.isEmpty {
-                        Text(item.phones.joined(separator: ", "))
-                            .font(.caption)
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.fullName.isEmpty ? "No Name" : item.fullName)
+                            .fontWeight(.medium)
+                        if !item.phones.isEmpty {
+                            Text(item.phones.joined(separator: ", "))
+                                .font(.caption)
+                        }
+                        if !item.emails.isEmpty {
+                            Text(item.emails.joined(separator: ", "))
+                                .font(.caption)
+                        }
+                        Text("Quality: \(Int((item.quality * 100).rounded()))%")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
-                    if !item.emails.isEmpty {
-                        Text(item.emails.joined(separator: ", "))
-                            .font(.caption)
+                    Spacer()
+                    // Tom: "Bei den Duplikat Kontakten solltest du auch eine
+                    // öffnen-Vorschau einbauen, damit man bei den Dubletten
+                    // besser sieht was bei dem Kontakt alles gespeichert ist".
+                    // Native CNContactViewController shows every field
+                    // (address, birthday, notes, related names, IM accounts,
+                    // social profiles) without us re-rendering them.
+                    Button {
+                        previewContact = item.cn
+                    } label: {
+                        Image(systemName: "magnifyingglass.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.accentColor)
                     }
-                    Text("Quality: \(Int(item.quality * 100))%")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Vollständigen Kontakt anzeigen")
                 }
                 .padding(.vertical, 2)
                 .accessibilityElement(children: .combine)
@@ -272,5 +293,45 @@ struct ContactGroupDetailView: View {
         } message: {
             Text("This action can't be undone, but you can restore from the latest vCard backup.")
         }
+        .sheet(item: $previewContact) { contact in
+            ContactPreviewSheet(contact: contact)
+        }
+    }
+}
+
+extension CNContact: Identifiable {
+    public var id: String { identifier }
+}
+
+/// SwiftUI wrapper around CNContactViewController. Read-only, no editing —
+/// the goal is just to inspect what's stored, especially when comparing
+/// duplicates side-by-side before a merge.
+struct ContactPreviewSheet: UIViewControllerRepresentable {
+    let contact: CNContact
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let vc = CNContactViewController(for: contact)
+        vc.allowsEditing = false
+        vc.allowsActions = false
+        vc.contactStore = CNContactStore()
+        vc.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: context.coordinator,
+            action: #selector(Coordinator.dismiss)
+        )
+        return UINavigationController(rootViewController: vc)
+    }
+
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(dismiss: { dismiss() })
+    }
+
+    final class Coordinator: NSObject {
+        let onDismiss: () -> Void
+        init(dismiss: @escaping () -> Void) { self.onDismiss = dismiss }
+        @objc func dismiss() { onDismiss() }
     }
 }
