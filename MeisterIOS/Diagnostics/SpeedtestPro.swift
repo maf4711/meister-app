@@ -68,40 +68,51 @@ actor SpeedtestPro {
     }
 
     /// Returns latency in ms, or -1 if the connection failed / timed out.
-    /// The previous implementation called `continuation.resume()` from both
-    /// the `.ready` AND `.cancelled` branches — and `connection.cancel()`
-    /// triggers `.cancelled` immediately after `.ready` — which fatal-errored
-    /// the CheckedContinuation. This was Tom's "Speedtest stürzt immer noch
-    /// ab" crash. Resume-once flag + 3-second timeout fixes both:
-    /// - exactly one resume even on rapid state transitions
-    /// - never hangs forever on a blocked port
+    ///
+    /// Round 3 fix: Tom kept hitting the crash on Build 27/28/29 even
+    /// after my "var resumed + NSLock" patch. Under Swift 6 strict
+    /// concurrency, capturing a `var` in @Sendable closures dispatched
+    /// to multiple queues isn't reliable — the value isn't shared with
+    /// proper memory ordering across the NWConnection internal queue
+    /// and the failsafe timer queue. So .ready and the subsequent
+    /// .cancelled (triggered by our own cancel() call) could BOTH see
+    /// `resumed = false`, and both call continuation.resume() →
+    /// SWIFT TASK CONTINUATION MISUSE → crash.
+    ///
+    /// A heap-allocated class instance is the iron-clad fix: the
+    /// reference is genuinely shared, NSLock provides the memory
+    /// ordering, and resume() is guaranteed to fire exactly once.
+    private final class ResumeBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var resumed = false
+        private let continuation: CheckedContinuation<Double, Never>
+        init(_ continuation: CheckedContinuation<Double, Never>) {
+            self.continuation = continuation
+        }
+        func resume(_ value: Double) {
+            lock.lock()
+            let alreadyResumed = resumed
+            resumed = true
+            lock.unlock()
+            guard !alreadyResumed else { return }
+            continuation.resume(returning: value)
+        }
+    }
+
     private func tcpPing(host: String) async -> Double {
         await withCheckedContinuation { (continuation: CheckedContinuation<Double, Never>) in
             let start = Date()
             let connection = NWConnection(host: .init(host), port: 443, using: .tcp)
-
-            // Atomic resume guard. NWConnection state callbacks can fire from
-            // multiple queues and may transition .ready → .cancelled almost
-            // simultaneously when we call cancel(); we must only resume once.
-            let lock = NSLock()
-            var resumed = false
-            let resume: (Double) -> Void = { value in
-                lock.lock()
-                let alreadyResumed = resumed
-                resumed = true
-                lock.unlock()
-                guard !alreadyResumed else { return }
-                continuation.resume(returning: value)
-            }
+            let box = ResumeBox(continuation)
 
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
                     let elapsed = Date().timeIntervalSince(start) * 1000
-                    resume(elapsed)
+                    box.resume(elapsed)
                     connection.cancel()
                 case .failed, .cancelled:
-                    resume(-1)
+                    box.resume(-1)
                 default:
                     break
                 }
@@ -109,10 +120,8 @@ actor SpeedtestPro {
             connection.start(queue: DispatchQueue.global())
 
             // Failsafe: if neither .ready nor .failed fires within 3 s, give up.
-            // Without this the test could hang forever on a blocked port and
-            // the CheckedContinuation would leak.
             DispatchQueue.global().asyncAfter(deadline: .now() + 3.0) {
-                resume(-1)
+                box.resume(-1)
                 connection.cancel()
             }
         }
@@ -124,6 +133,10 @@ actor SpeedtestPro {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let seconds = Date().timeIntervalSince(start)
+            // Guard against impossibly fast responses (cached, redirected) — a
+            // sub-millisecond seconds value would yield .infinity Mbps and
+            // JSONEncoder would later choke on the saved history.
+            guard seconds > 0.001 else { return 0 }
             return (Double(data.count) * 8.0 / 1_000_000) / seconds
         } catch {
             return 0
@@ -139,6 +152,7 @@ actor SpeedtestPro {
         do {
             let (_, _) = try await URLSession.shared.upload(for: request, from: payload)
             let seconds = Date().timeIntervalSince(start)
+            guard seconds > 0.001 else { return 0 }
             return (Double(byteCount) * 8.0 / 1_000_000) / seconds
         } catch {
             return 0

@@ -86,12 +86,26 @@ actor IOSDeviceReader {
         let level: Float
         let state: UIDevice.BatteryState
         if hasBattery {
+            // Tom: "Akkustand stimmt auch immer noch nicht" — on Build 25/29.
+            // The previous fix used a 100 ms wait after enabling monitoring,
+            // but UIDevice.batteryLevel routinely needs longer (or returns -1)
+            // until iOS samples the gauge. Poll up to 1.5 s in 150 ms
+            // increments, accepting the first non-negative reading. Settles
+            // reliably without blocking the UI longer than necessary.
             await MainActor.run { device.isBatteryMonitoringEnabled = true }
-            // First read after enabling monitoring is sometimes -1; brief wait
-            // gives the system a chance to sample.
-            try? await Task.sleep(for: .milliseconds(100))
-            level = await MainActor.run { device.batteryLevel }
-            state = await MainActor.run { device.batteryState }
+            var sampledLevel: Float = -1
+            var sampledState: UIDevice.BatteryState = .unknown
+            for _ in 0..<10 {
+                let snap = await MainActor.run { (device.batteryLevel, device.batteryState) }
+                if snap.0 >= 0 {
+                    sampledLevel = snap.0
+                    sampledState = snap.1
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+            level = sampledLevel
+            state = sampledState
         } else {
             level = -1
             state = .unknown
