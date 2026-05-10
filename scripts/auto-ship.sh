@@ -49,9 +49,15 @@ SHA=$(git rev-parse --short HEAD)
 notify "Meister ship" "Build started for $SHA"
 
 if ./scripts/ship.sh "$NOTES" >> "$LOG" 2>&1; then
-    BUILD=$(grep -oE 'build [0-9]+ live' "$LOG" | tail -1 | awk '{print $2}')
+    BUILD=$(grep -oE 'Build [0-9]+ live' "$LOG" | tail -1 | awk '{print $2}')
     notify "Meister ship ✓" "Build ${BUILD:-?} live on TestFlight"
     echo "[auto-ship] success" >> "$LOG"
+
+    # Build a one-line summary from the commit subject (first line of $NOTES)
+    # and tell Tom on iMessage. Off-switch: touch .no-tom-notify.
+    SUBJECT=$(echo "$NOTES" | head -n 1)
+    SUMMARY="Meister Build ${BUILD:-?} live: ${SUBJECT}. In TestFlight 'Aktualisieren'."
+    ./scripts/notify-tom.sh "$SUMMARY" || true
 else
     RC=$?
     notify "Meister ship ✗" "Build failed (rc=$RC) — see build/auto-ship.log"
