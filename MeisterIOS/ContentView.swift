@@ -6,6 +6,8 @@ struct ContentView: View {
         TabView {
             IOSDashboardView()
                 .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+            IOSAutoCleanView()
+                .tabItem { Label("Alles erledigen", systemImage: "wand.and.stars.inverse") }
             PhotosCleanerView()
                 .tabItem { Label("Photos", systemImage: "photo.on.rectangle.angled") }
             ContactsCleanerView()
