@@ -67,19 +67,40 @@ struct PermissionGate<Granted: View>: View {
             } description: {
                 Text(message)
             } actions: {
-                Button {
-                    isRequesting = true
-                    Task {
-                        await request()
-                        isRequesting = false
+                VStack(spacing: 8) {
+                    Button {
+                        isRequesting = true
+                        Task {
+                            await request()
+                            isRequesting = false
+                        }
+                    } label: {
+                        Text(isRequesting ? "Requesting Access…" : "Grant Access")
+                            .frame(maxWidth: 240)
                     }
-                } label: {
-                    Text(isRequesting ? "Requesting Access…" : "Grant Access")
-                        .frame(maxWidth: 240)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isRequesting)
+                    .accessibilityHint("Opens the system authorization dialog.")
+
+                    // Tom report Build 29: "Kontakte Zugriff geht nicht".
+                    // Sometimes iOS suppresses the system dialog (Catalyst
+                    // configurations, prior denial cached by ProcessInfo
+                    // before our authorizationStatus check sees it, etc.) —
+                    // the user taps Grant Access and nothing visible
+                    // happens. Always offer a Settings escape hatch even
+                    // before the gate's internal state has flipped to
+                    // .denied so they're never stuck.
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Stattdessen in Einstellungen öffnen")
+                            .font(.footnote)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(isRequesting)
-                .accessibilityHint("Opens the system authorization dialog.")
             }
         case .denied:
             ContentUnavailableView {
