@@ -59,12 +59,16 @@ actor IOSDeviceReader {
             // ProcessInfo's version-string still reports the iOS-equivalent.
             modelName = macModelName() ?? "Mac"
             osName = "macOS"
-            let v = ProcessInfo.processInfo.operatingSystemVersion
-            osVersion = "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
+            osVersion = formatOSVersion(ProcessInfo.processInfo.operatingSystemVersion)
         case .iPhone, .iPad:
             modelName = await MainActor.run { device.model }
             osName = await MainActor.run { device.systemName }
-            osVersion = await MainActor.run { device.systemVersion }
+            // Tom reported "Hab 26.4.1 aber Meister zeigt 26.4.0". UIDevice.systemVersion
+            // sometimes truncates to "26.4" without the patch on iPadOS, while
+            // ProcessInfo.operatingSystemVersion returns the exact triple. Use the
+            // one that has more precision and format it without a trailing ".0".
+            let pv = ProcessInfo.processInfo.operatingSystemVersion
+            osVersion = formatOSVersion(pv)
         }
         let os = (osName, osVersion)
 
@@ -108,6 +112,15 @@ actor IOSDeviceReader {
             hasBattery: hasBattery,
             runtimeKind: runtime
         )
+    }
+
+    /// Format an OS version trio without a noisy trailing ".0".
+    /// "26.4.1" stays "26.4.1"; "26.4.0" becomes "26.4". Plain reading.
+    private nonisolated func formatOSVersion(_ v: OperatingSystemVersion) -> String {
+        if v.patchVersion == 0 {
+            return "\(v.majorVersion).\(v.minorVersion)"
+        }
+        return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
     }
 
     private nonisolated func detectRuntimeKind() -> IOSDeviceSnapshot.RuntimeKind {
