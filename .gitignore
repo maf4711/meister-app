@@ -23,3 +23,6 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 *.tsbuildinfo
+
+# Local automation locks
+.auto-ship.lock
