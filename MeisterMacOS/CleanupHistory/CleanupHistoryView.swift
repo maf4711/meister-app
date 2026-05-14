@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class CleanupHistoryModel: ObservableObject {
@@ -27,12 +27,12 @@ struct CleanupHistoryView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             statsCards
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.entries.isEmpty { await model.reload() } }
     }
 
@@ -40,11 +40,11 @@ struct CleanupHistoryView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Cleanup History")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Was wurde wann reclaimed — gelesen aus den Manifests.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -73,19 +73,19 @@ struct CleanupHistoryView: View {
     private func statTile(label: String, value: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(label)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .textCase(.uppercase)
             }
             Text(value)
-                .font(MD3.Typo.tabular(MD3.Typo.title3))
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.tabular(MD4.Typo.title3))
+                .foregroundStyle(MD4.SemColor.textPrimary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(MD4.SemColor.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var list: some View {
@@ -101,20 +101,20 @@ struct CleanupHistoryView: View {
                 List(model.entries) { entry in
                     HStack(spacing: 12) {
                         Image(systemName: entry.kind == .cleanup ? "sparkles" : "trash.square")
-                            .foregroundStyle(MD3.SemColor.brandPrimary)
+                            .foregroundStyle(MD4.SemColor.brandPrimary)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.title)
-                                .font(MD3.Typo.body)
-                                .foregroundStyle(MD3.SemColor.textPrimary)
+                                .font(MD4.Typo.body)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
                             Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                         }
                         Spacer()
                         Text(entry.bytes.humanBytes)
-                            .font(MD3.Typo.tabular(MD3.Typo.body))
-                            .foregroundStyle(MD3.SemColor.success)
+                            .font(MD4.Typo.tabular(MD4.Typo.body))
+                            .foregroundStyle(MD4.SemColor.success)
                         Button {
                             NSWorkspace.shared.activateFileViewerSelecting([entry.manifestPath])
                         } label: { Image(systemName: "magnifyingglass") }

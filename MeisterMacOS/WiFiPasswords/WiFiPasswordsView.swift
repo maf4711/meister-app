@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct WiFiNetwork: Identifiable, Hashable {
     let id: String       // SSID
@@ -97,10 +97,10 @@ struct WiFiPasswordsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.networks.isEmpty { await model.reload() } }
         .alert("Fehler",
                isPresented: Binding(get: { model.lastError != nil },
@@ -113,11 +113,11 @@ struct WiFiPasswordsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Wi-Fi Networks & Passwords")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Alle gespeicherten WLANs. Passwort sichtbar nach Mac-Login-Confirm pro Netz.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -148,16 +148,16 @@ struct WiFiPasswordsView: View {
     private func row(_ net: WiFiNetwork) -> some View {
         HStack {
             Image(systemName: "wifi")
-                .foregroundStyle(MD3.SemColor.brandPrimary)
+                .foregroundStyle(MD4.SemColor.brandPrimary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(net.ssid)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 if let pw = model.revealed[net.ssid] {
                     HStack(spacing: 6) {
                         Text(pw)
-                            .font(MD3.Typo.tabular(MD3.Typo.caption))
-                            .foregroundStyle(MD3.SemColor.success)
+                            .font(MD4.Typo.tabular(MD4.Typo.caption))
+                            .foregroundStyle(MD4.SemColor.success)
                             .textSelection(.enabled)
                         Button {
                             model.copy(pw)
@@ -166,8 +166,8 @@ struct WiFiPasswordsView: View {
                     }
                 } else {
                     Text("Passwort verborgen")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
             Spacer()
@@ -177,10 +177,10 @@ struct WiFiPasswordsView: View {
                 }
             } else {
                 Text("revealed")
-                    .font(MD3.Typo.caption.bold())
+                    .font(MD4.Typo.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(MD3.SemColor.success.opacity(0.2), in: Capsule())
-                    .foregroundStyle(MD3.SemColor.success)
+                    .background(MD4.SemColor.success.opacity(0.2), in: Capsule())
+                    .foregroundStyle(MD4.SemColor.success)
             }
         }
         .padding(.vertical, 2)

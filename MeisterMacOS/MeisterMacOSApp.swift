@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @main
 struct MeisterMacOSApp: App {
@@ -14,8 +14,8 @@ struct MeisterMacOSApp: App {
             MacRootView()
                 .environmentObject(nav)
                 .frame(minWidth: 880, minHeight: 600)
-                .tint(MD3.SemColor.brandPrimary)
-                .background(MD3.SemColor.background)
+                .tint(MD4.SemColor.brandPrimary)
+                .background(MD4.SemColor.background)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     handleURL(url)
@@ -37,7 +37,7 @@ struct MeisterMacOSApp: App {
 
         Settings {
             MacSettingsView()
-                .tint(MD3.SemColor.brandPrimary)
+                .tint(MD4.SemColor.brandPrimary)
                 .preferredColorScheme(.dark)
         }
 

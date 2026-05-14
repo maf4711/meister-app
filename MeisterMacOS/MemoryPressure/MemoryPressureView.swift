@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct MemSample: Identifiable, Hashable {
     let id: Date
@@ -131,10 +131,10 @@ struct MemoryPressureView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .onAppear { model.start() }
         .onDisappear { model.stop() }
     }
@@ -143,11 +143,11 @@ struct MemoryPressureView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Memory Pressure")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Live — vm_stat alle 5 Sekunden, letzte 5 Min als Sparkline.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
         }
@@ -173,15 +173,15 @@ struct MemoryPressureView: View {
     private func pressureBadge(_ p: MemSample.Pressure) -> some View {
         let (color, label, icon): (Color, String, String) = {
             switch p {
-            case .normal:   return (MD3.SemColor.success, "Memory Pressure: NORMAL", "checkmark.shield.fill")
-            case .warning:  return (MD3.SemColor.warning, "Memory Pressure: WARNING", "exclamationmark.triangle.fill")
-            case .critical: return (MD3.SemColor.error, "Memory Pressure: CRITICAL", "xmark.shield.fill")
+            case .normal:   return (MD4.SemColor.success, "Memory Pressure: NORMAL", "checkmark.shield.fill")
+            case .warning:  return (MD4.SemColor.warning, "Memory Pressure: WARNING", "exclamationmark.triangle.fill")
+            case .critical: return (MD4.SemColor.error, "Memory Pressure: CRITICAL", "xmark.shield.fill")
             }
         }()
         return HStack(spacing: 8) {
             Image(systemName: icon).foregroundStyle(color)
             Text(label)
-                .font(MD3.Typo.headline)
+                .font(MD4.Typo.headline)
                 .foregroundStyle(color)
             Spacer()
         }
@@ -204,27 +204,27 @@ struct MemoryPressureView: View {
     private func tile(_ label: String, _ value: String, _ icon: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Image(systemName: icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(label.uppercased())
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 Spacer()
             }
             Text(value)
-                .font(MD3.Typo.tabular(MD3.Typo.title3))
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.tabular(MD4.Typo.title3))
+                .foregroundStyle(MD4.SemColor.textPrimary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var sparkline: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Used Memory — letzte 5 Min")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Canvas { ctx, size in
                 guard model.samples.count > 1 else { return }
                 let totalMem = Double(ProcessInfo.processInfo.physicalMemory)
@@ -236,10 +236,10 @@ struct MemoryPressureView: View {
                     if idx == 0 { path.move(to: CGPoint(x: x, y: y)) }
                     else { path.addLine(to: CGPoint(x: x, y: y)) }
                 }
-                ctx.stroke(path, with: .color(MD3.SemColor.brandPrimary), lineWidth: 2)
+                ctx.stroke(path, with: .color(MD4.SemColor.brandPrimary), lineWidth: 2)
             }
             .frame(height: 80)
-            .background(MD3.SemColor.surfaceRaised,
+            .background(MD4.SemColor.surfaceRaised,
                         in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
     }

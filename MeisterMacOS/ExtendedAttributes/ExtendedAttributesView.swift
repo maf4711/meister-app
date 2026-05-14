@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct XAttrCategory: Identifiable, Hashable {
     let id: String
@@ -159,10 +159,10 @@ struct ExtendedAttributesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.categories.isEmpty { await model.scan() } }
     }
 
@@ -170,11 +170,11 @@ struct ExtendedAttributesView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Extended Attributes")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(".DS_Store + ._* Files in den Trash, Quarantine-xattr stripped — keine Datei wird gelöscht außer Apple-Müll-Files.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.scan() } } label: {
@@ -197,8 +197,8 @@ struct ExtendedAttributesView: View {
                     }
                     if let last = model.lastResult {
                         Text(last)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.success)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.success)
                     }
                 }
                 .padding(20)
@@ -208,14 +208,14 @@ struct ExtendedAttributesView: View {
 
     private func categoryCard(_ c: XAttrCategory) -> some View {
         HStack {
-            Image(systemName: c.icon).foregroundStyle(MD3.SemColor.brandPrimary)
+            Image(systemName: c.icon).foregroundStyle(MD4.SemColor.brandPrimary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(c.title)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(detailText(c))
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button(actionLabel(c)) {
@@ -225,7 +225,7 @@ struct ExtendedAttributesView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 

@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class UninstallerModel: ObservableObject {
@@ -88,7 +88,7 @@ struct UninstallerView: View {
             detail
                 .frame(minWidth: 360)
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.apps.isEmpty { await model.loadApps() } }
         .alert("Uninstall \(model.selectedApp?.displayName ?? "")?",
                isPresented: $showConfirm) {
@@ -114,14 +114,14 @@ struct UninstallerView: View {
         VStack(spacing: 0) {
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(MD3.SemColor.textTertiary)
+                    .foregroundStyle(MD4.SemColor.textTertiary)
                 TextField("Search apps", text: $search)
                     .textFieldStyle(.plain)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
 
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
 
             List(filteredApps, selection: Binding(
                 get: { model.selectedApp?.id },
@@ -137,7 +137,7 @@ struct UninstallerView: View {
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
         }
-        .background(MD3.SemColor.surface)
+        .background(MD4.SemColor.surface)
     }
 
     private func appRow(_ app: InstalledApp) -> some View {
@@ -146,17 +146,17 @@ struct UninstallerView: View {
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(app.displayName)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(app.version ?? app.bundleID ?? "")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .lineLimit(1)
             }
             Spacer()
             Text(app.bundleSize.humanBytes)
-                .font(MD3.Typo.tabular(MD3.Typo.caption))
-                .foregroundStyle(MD3.SemColor.textTertiary)
+                .font(MD4.Typo.tabular(MD4.Typo.caption))
+                .foregroundStyle(MD4.SemColor.textTertiary)
         }
     }
 
@@ -172,13 +172,13 @@ struct UninstallerView: View {
         if let app = model.selectedApp {
             VStack(spacing: 0) {
                 detailHeader(for: app)
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 if model.isScanningLeftovers {
                     VStack(spacing: 12) {
                         ProgressView()
                         Text("Scanning leftovers…")
-                            .font(MD3.Typo.small)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.small)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if model.leftovers.isEmpty {
@@ -189,16 +189,16 @@ struct UninstallerView: View {
                 } else {
                     leftoverList
                 }
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 footer
             }
-            .background(MD3.SemColor.background)
+            .background(MD4.SemColor.background)
         } else {
             ContentUnavailableView("Pick an app",
                                    systemImage: "trash",
                                    description: Text("Select an app to scan for leftover files."))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(MD3.SemColor.background)
+                .background(MD4.SemColor.background)
         }
     }
 
@@ -208,15 +208,15 @@ struct UninstallerView: View {
                 .frame(width: 56, height: 56)
             VStack(alignment: .leading, spacing: 3) {
                 Text(app.displayName)
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("\(app.version ?? "?") · \(app.bundleSize.humanBytes)")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 if let id = app.bundleID {
                     Text(id)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                 }
             }
             Spacer()
@@ -250,18 +250,18 @@ struct UninstallerView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.url.lastPathComponent)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(item.url.deletingLastPathComponent().path)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textTertiary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textTertiary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
             Spacer()
             Text(item.bytes.humanBytes)
-                .font(MD3.Typo.tabular(MD3.Typo.caption))
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.tabular(MD4.Typo.caption))
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.vertical, 2)
     }
@@ -270,12 +270,12 @@ struct UninstallerView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Will reclaim")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .textCase(.uppercase)
                 Text(model.totalSelectedBytes.humanBytes)
-                    .font(MD3.Typo.tabular(MD3.Typo.headline))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.headline))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
             }
             Spacer()
             Button {

@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class DNSFlushModel: ObservableObject {
@@ -50,20 +50,20 @@ struct DNSFlushView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("DNS-Cache löschen")
-                .font(MD3.Typo.title2)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.title2)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text("dscacheutil -flushcache + killall -HUP mDNSResponder. Behebt DNS-Fehler, falsche Weiterleitungen und Hostsfile-Änderungen, die nicht greifen.")
-                .font(MD3.Typo.small)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.small)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -76,8 +76,8 @@ struct DNSFlushView: View {
             phaseInfo
             if let last = model.lastFlushed {
                 Text("Letzter Flush: \(last.formatted(date: .omitted, time: .shortened))")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             usageCard
             Spacer()
@@ -98,12 +98,12 @@ struct DNSFlushView: View {
                                ? .linear(duration: 1.0).repeatForever(autoreverses: false)
                                : .default, value: model.phase == .flushing)
                 Text(model.phase == .flushing ? "Flusht…" : "DNS-Cache löschen")
-                    .font(MD3.Typo.headline)
+                    .font(MD4.Typo.headline)
             }
             .padding(.horizontal, 32).padding(.vertical, 16)
             .frame(minWidth: 280)
             .foregroundStyle(.white)
-            .background(MD3.SemColor.brandPrimary,
+            .background(MD4.SemColor.brandPrimary,
                         in: ContinuousSquircle(cornerRadius: 16))
         }
         .buttonStyle(.plain)
@@ -117,39 +117,39 @@ struct DNSFlushView: View {
             EmptyView()
         case .flushing:
             Text("dscacheutil + mDNSResponder…")
-                .font(MD3.Typo.small)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.small)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         case .done:
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(MD3.SemColor.success)
+                    .foregroundStyle(MD4.SemColor.success)
                 Text("Cache geleert. DNS-Auflösung startet sauber.")
-                    .foregroundStyle(MD3.SemColor.success)
+                    .foregroundStyle(MD4.SemColor.success)
             }
-            .font(MD3.Typo.body)
+            .font(MD4.Typo.body)
         case .error(let msg):
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .foregroundStyle(MD4.SemColor.warning)
                     Text("Fehler — wahrscheinlich braucht killall mehr Rechte.")
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .foregroundStyle(MD4.SemColor.warning)
                 }
                 if !msg.isEmpty {
                     Text(msg)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
-            .font(MD3.Typo.body)
+            .font(MD4.Typo.body)
         }
     }
 
     private var usageCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Wann sinnvoll?")
-                .font(MD3.Typo.caption.bold())
-                .foregroundStyle(MD3.SemColor.brandPrimary)
+                .font(MD4.Typo.caption.bold())
+                .foregroundStyle(MD4.SemColor.brandPrimary)
                 .textCase(.uppercase)
             ForEach([
                 "Hosts-Datei geändert und Änderungen greifen nicht",
@@ -158,14 +158,14 @@ struct DNSFlushView: View {
                 "Nach Netzwerk-Wechsel bei persistenten Fehlern",
             ], id: \.self) { tip in
                 HStack(alignment: .top, spacing: 8) {
-                    Text("·").foregroundStyle(MD3.SemColor.textTertiary)
-                    Text(tip).font(MD3.Typo.small).foregroundStyle(MD3.SemColor.textSecondary)
+                    Text("·").foregroundStyle(MD4.SemColor.textTertiary)
+                    Text(tip).font(MD4.Typo.small).foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: 500, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

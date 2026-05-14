@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct BlocklistSource: Identifiable, Hashable {
     let id: String
@@ -106,14 +106,14 @@ struct HostsBlocklistView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
             if model.stagedPath != nil {
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 installPanel
             }
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .alert("Fehler",
                isPresented: Binding(get: { model.error != nil },
                                     set: { if !$0 { model.error = nil } })) {
@@ -124,11 +124,11 @@ struct HostsBlocklistView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Hosts Blocklist")
-                .font(MD3.Typo.title2)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.title2)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text("Curated Ad-Block-Lists laden, in /etc/hosts mergen. Backup wird automatisch gemacht.")
-                .font(MD3.Typo.small)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.small)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -150,21 +150,21 @@ struct HostsBlocklistView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(source.name)
-                        .font(MD3.Typo.headline)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.headline)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Text(source.description)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 Spacer()
                 if model.loading.contains(source.id) {
                     ProgressView().controlSize(.small)
                 } else if let f = model.fetched[source.id] {
                     Text("\(f.entryCount) entries")
-                        .font(MD3.Typo.caption.bold())
+                        .font(MD4.Typo.caption.bold())
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(MD3.SemColor.success.opacity(0.18), in: Capsule())
-                        .foregroundStyle(MD3.SemColor.success)
+                        .background(MD4.SemColor.success.opacity(0.18), in: Capsule())
+                        .foregroundStyle(MD4.SemColor.success)
                 }
             }
             HStack {
@@ -183,25 +183,25 @@ struct HostsBlocklistView: View {
                 }
                 Spacer()
                 Link(source.url.absoluteString, destination: source.url)
-                    .font(MD3.Typo.caption)
+                    .font(MD4.Typo.caption)
             }
             .disabled(model.loading.contains(source.id))
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var installPanel: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Install-Kommando in Zwischenablage")
-                .font(MD3.Typo.caption.bold())
-                .foregroundStyle(MD3.SemColor.brandPrimary)
+                .font(MD4.Typo.caption.bold())
+                .foregroundStyle(MD4.SemColor.brandPrimary)
                 .textCase(.uppercase)
             Text("Backup von /etc/hosts wird automatisch angelegt, dann DNS-Cache geflushed.")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             HStack {
                 Button {
                     model.copyInstallCommand()
@@ -212,14 +212,14 @@ struct HostsBlocklistView: View {
                 }
                 if let path = model.stagedPath {
                     Text(path.lastPathComponent)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                         .lineLimit(1)
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.brandPrimary.opacity(0.08))
+        .background(MD4.SemColor.brandPrimary.opacity(0.08))
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct RestorableEntry: Identifiable, Hashable {
     let id: String              // original path
@@ -129,12 +129,12 @@ struct UndoCleanupView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             footer
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.entries.isEmpty { await model.reload() } }
         .alert("Items aus dem Trash zurückholen?",
                isPresented: $showConfirm) {
@@ -151,11 +151,11 @@ struct UndoCleanupView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Undo Last Cleanup")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Letzten System-Cleanup-Lauf rückgängig machen — Items aus ~/.Trash an ihre alten Pfade verschieben.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -179,8 +179,8 @@ struct UndoCleanupView: View {
             VStack(alignment: .leading, spacing: 0) {
                 if let m = model.manifestPath {
                     Text("Manifest: \(m.lastPathComponent) · \(model.entries.count) Einträge · \(model.availableCount) noch im Trash")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .padding(.horizontal, 20).padding(.vertical, 10)
                 }
                 List {
@@ -206,25 +206,25 @@ struct UndoCleanupView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(e.originalURL.lastPathComponent)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(e.isAvailable ? MD3.SemColor.textPrimary : MD3.SemColor.textTertiary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(e.isAvailable ? MD4.SemColor.textPrimary : MD4.SemColor.textTertiary)
                 Text(e.originalURL.deletingLastPathComponent().path)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
             Spacer()
             Text(e.category)
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Text(e.bytes.humanBytes)
-                .font(MD3.Typo.tabular(MD3.Typo.caption))
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.tabular(MD4.Typo.caption))
+                .foregroundStyle(MD4.SemColor.textSecondary)
             if !e.isAvailable {
                 Text("nicht im Trash")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.error)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.error)
             }
         }
         .padding(.vertical, 2)
@@ -234,18 +234,18 @@ struct UndoCleanupView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Wiederherstellen")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .textCase(.uppercase)
                 Text(model.totalBytes.humanBytes)
-                    .font(MD3.Typo.tabular(MD3.Typo.headline))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.headline))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
             }
             Spacer()
             if let result = model.lastResult {
                 Text("Letzter Lauf: \(result.restored) ok, \(result.failed) failed")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(result.failed == 0 ? MD3.SemColor.success : MD3.SemColor.warning)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(result.failed == 0 ? MD4.SemColor.success : MD4.SemColor.warning)
                     .padding(.trailing, 12)
             }
             Button("Wiederherstellen") {

@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct AutopilotState: Equatable {
     let isInstalled: Bool
@@ -121,10 +121,10 @@ struct AutopilotView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { await model.reload() }
         .alert("Fehler",
                isPresented: Binding(get: { model.error != nil },
@@ -136,11 +136,11 @@ struct AutopilotView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Autopilot")
-                .font(MD3.Typo.title2)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.title2)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text("Tägliche Quick-Clean um 03:30 via LaunchAgent. Apple-Shortcuts-kompatibel.")
-                .font(MD3.Typo.small)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.small)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -163,42 +163,42 @@ struct AutopilotView: View {
     private func statusCard(_ s: AutopilotState) -> some View {
         HStack(spacing: 14) {
             Image(systemName: s.isInstalled ? "clock.badge.checkmark" : "clock.badge.questionmark")
-                .foregroundStyle(s.isInstalled ? MD3.SemColor.success : MD3.SemColor.textSecondary)
+                .foregroundStyle(s.isInstalled ? MD4.SemColor.success : MD4.SemColor.textSecondary)
                 .font(.title)
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.isInstalled ? "Autopilot installiert" : "Autopilot nicht aktiv")
-                    .font(MD3.Typo.title3)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title3)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 if let last = s.lastRun {
                     Text("Letzter Lauf: \(last.formatted(date: .abbreviated, time: .shortened))")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 } else {
                     Text("Noch kein Lauf protokolliert")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 Text(s.plistPath)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textTertiary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textTertiary)
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer()
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func actionCard(_ s: AutopilotState) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Setup")
-                .font(MD3.Typo.headline)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.headline)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text("Schedule: täglich um 03:30 — `open meister://run/quick-clean`")
-                .font(MD3.Typo.small)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.small)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             HStack {
                 if s.isInstalled {
                     Button(role: .destructive) {
@@ -226,7 +226,7 @@ struct AutopilotView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct TaggedFile: Identifiable, Hashable {
     let id: String
@@ -127,14 +127,14 @@ struct TagManagerView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             HStack(spacing: 0) {
                 tagSidebar
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 fileList
             }
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.summaries.isEmpty { await model.reload() } }
     }
 
@@ -142,11 +142,11 @@ struct TagManagerView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Tag Manager")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Finder-Tags in ~/Documents, ~/Desktop, ~/Downloads. Klick aufs Tag → Datei-Liste.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -163,14 +163,14 @@ struct TagManagerView: View {
             ForEach(model.summaries) { s in
                 HStack {
                     Image(systemName: "tag.fill")
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(s.tag)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("\(s.count) files · \(s.totalBytes.humanBytes)")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                 }
                 .tag(s.tag as String?)
@@ -191,21 +191,21 @@ struct TagManagerView: View {
                         .resizable().frame(width: 24, height: 24)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(f.url.lastPathComponent)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text(f.url.deletingLastPathComponent().path)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
                     Spacer()
                     if f.tags.count > 1 {
                         Text("+\(f.tags.count - 1)")
-                            .font(MD3.Typo.caption)
+                            .font(MD4.Typo.caption)
                             .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(MD3.SemColor.surfaceRaised, in: Capsule())
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .background(MD4.SemColor.surfaceRaised, in: Capsule())
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting([f.url])

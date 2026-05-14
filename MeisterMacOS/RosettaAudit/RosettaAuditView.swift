@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct AppArchInfo: Identifiable, Hashable {
     let id: String
@@ -136,12 +136,12 @@ struct RosettaAuditView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             statsAndFilter
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.apps.isEmpty { await model.reload() } }
     }
 
@@ -149,11 +149,11 @@ struct RosettaAuditView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Rosetta Audit")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Welche Apps in /Applications sind noch x86? lipo -archs pro Bundle.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -179,11 +179,11 @@ struct RosettaAuditView: View {
 
     private func chip(_ label: String, _ filter: AppArchInfo.ArchClass?, urgent: Bool = false) -> some View {
         let active = model.filter == filter
-        let color: Color = urgent && !active ? MD3.SemColor.warning : (active ? MD3.SemColor.brandPrimary : MD3.SemColor.textSecondary)
+        let color: Color = urgent && !active ? MD4.SemColor.warning : (active ? MD4.SemColor.brandPrimary : MD4.SemColor.textSecondary)
         return Button(label) { model.filter = filter }
-            .font(MD3.Typo.caption)
+            .font(MD4.Typo.caption)
             .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(active ? MD3.SemColor.brandPrimary.opacity(0.2) : Color.clear, in: Capsule())
+            .background(active ? MD4.SemColor.brandPrimary.opacity(0.2) : Color.clear, in: Capsule())
             .foregroundStyle(color)
             .buttonStyle(.plain)
     }
@@ -203,16 +203,16 @@ struct RosettaAuditView: View {
                             .resizable().frame(width: 28, height: 28)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(app.displayName)
-                                .font(MD3.Typo.body)
-                                .foregroundStyle(MD3.SemColor.textPrimary)
+                                .font(MD4.Typo.body)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
                             Text(app.architectures.joined(separator: " · "))
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                         }
                         Spacer()
                         Text(app.bundleSize.humanBytes)
-                            .font(MD3.Typo.tabular(MD3.Typo.caption))
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.tabular(MD4.Typo.caption))
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                         archBadge(app.arch)
                     }
                     .padding(.vertical, 2)
@@ -226,14 +226,14 @@ struct RosettaAuditView: View {
     private func archBadge(_ arch: AppArchInfo.ArchClass) -> some View {
         let color: Color = {
             switch arch {
-            case .arm: return MD3.SemColor.success
-            case .universal: return MD3.SemColor.brandPrimary
-            case .intel: return MD3.SemColor.warning
-            case .unknown: return MD3.SemColor.textTertiary
+            case .arm: return MD4.SemColor.success
+            case .universal: return MD4.SemColor.brandPrimary
+            case .intel: return MD4.SemColor.warning
+            case .unknown: return MD4.SemColor.textTertiary
             }
         }()
         return Text(arch.rawValue)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)

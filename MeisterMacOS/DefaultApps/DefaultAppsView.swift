@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct DefaultAppHandler: Identifiable, Hashable {
     let id: String
@@ -71,10 +71,10 @@ struct DefaultAppsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.entries.isEmpty { await model.reload() } }
     }
 
@@ -82,11 +82,11 @@ struct DefaultAppsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Default Apps")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Welche App öffnet welchen Filetyp. Get Info → Open With benutzen, um zu ändern.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -106,26 +106,26 @@ struct DefaultAppsView: View {
                         .frame(width: 28, height: 28)
                 } else {
                     Image(systemName: "questionmark.app.dashed")
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                         .frame(width: 28)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.label)
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Text(entry.uti.identifier)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(entry.appName ?? "—")
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     if let bid = entry.appBundleID {
                         Text(bid)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                             .lineLimit(1)
                     }
                 }

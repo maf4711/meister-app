@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct BluetoothDevice: Identifiable, Hashable {
     let id: String
@@ -79,10 +79,10 @@ struct BluetoothDevicesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.devices.isEmpty { await model.reload() } }
     }
 
@@ -90,11 +90,11 @@ struct BluetoothDevicesView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Bluetooth Devices")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Gepairt + Battery-Level wo verfügbar (Magic Keyboard, Maus, Trackpad, AirPods).")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -117,14 +117,14 @@ struct BluetoothDevicesView: View {
             List(model.devices) { d in
                 HStack {
                     Image(systemName: d.connected ? "antenna.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash")
-                        .foregroundStyle(d.connected ? MD3.SemColor.success : MD3.SemColor.textSecondary)
+                        .foregroundStyle(d.connected ? MD4.SemColor.success : MD4.SemColor.textSecondary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(d.name)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("\(d.kind ?? "—") · \(d.address)")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Spacer()
                     if let b = d.batteryPercent {
@@ -139,11 +139,11 @@ struct BluetoothDevicesView: View {
     }
 
     private func batteryBadge(percent: Int) -> some View {
-        let color: Color = percent < 20 ? MD3.SemColor.error : (percent < 40 ? MD3.SemColor.warning : MD3.SemColor.success)
+        let color: Color = percent < 20 ? MD4.SemColor.error : (percent < 40 ? MD4.SemColor.warning : MD4.SemColor.success)
         return HStack(spacing: 4) {
             Image(systemName: percent < 20 ? "battery.25" : (percent < 60 ? "battery.50" : "battery.100"))
             Text("\(percent)%")
-                .font(MD3.Typo.tabular(MD3.Typo.caption.bold()))
+                .font(MD4.Typo.tabular(MD4.Typo.caption.bold()))
         }
         .padding(.horizontal, 8).padding(.vertical, 3)
         .background(color.opacity(0.18), in: Capsule())

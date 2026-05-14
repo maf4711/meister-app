@@ -1,12 +1,12 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Apple Design 2026 — celebration particles after a successful action.
 /// Use as `.sparkleBurst(trigger:)` on a view; it draws a one-shot particle
 /// emission centered on the view whenever `trigger` flips to true.
 struct SparkleBurst: View {
     let trigger: Bool
-    var color: Color = MD3.SemColor.brandPrimary
+    var color: Color = MD4.SemColor.brandPrimary
     var particleCount: Int = 24
 
     @State private var particles: [Particle] = []
@@ -82,7 +82,7 @@ struct SparkleBurst: View {
 
 extension View {
     /// Layer a sparkle burst on top of any view; triggered when `trigger` flips.
-    func sparkleBurst(trigger: Bool, color: Color = MD3.SemColor.brandPrimary) -> some View {
+    func sparkleBurst(trigger: Bool, color: Color = MD4.SemColor.brandPrimary) -> some View {
         overlay(SparkleBurst(trigger: trigger, color: color).allowsHitTesting(false))
     }
 }

@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class HealthScoreModel: ObservableObject {
@@ -30,10 +30,10 @@ struct HealthScoreView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { await model.startAutoRefresh() }
     }
 
@@ -41,11 +41,11 @@ struct HealthScoreView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Health Score")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Eine Zahl 0-100. Sicherheit, Backup, Cleanup-Druck, Snapshots zusammengezählt.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -78,10 +78,10 @@ struct HealthScoreView: View {
             .overlay {
                 VStack(spacing: 0) {
                     NumberFlow(score, font: .system(size: 56, weight: .light))
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Text("/ 100")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
     }
@@ -92,18 +92,18 @@ struct HealthScoreView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(sig.title)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text(sig.detail)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Spacer()
                     Text("\(sig.earned)/\(sig.weight)")
-                        .font(MD3.Typo.tabular(MD3.Typo.body))
+                        .font(MD4.Typo.tabular(MD4.Typo.body))
                         .foregroundStyle(sig.earned == sig.weight
-                                         ? MD3.SemColor.success
-                                         : MD3.SemColor.warning)
+                                         ? MD4.SemColor.success
+                                         : MD4.SemColor.warning)
                 }
                 .padding(.vertical, 2)
             }

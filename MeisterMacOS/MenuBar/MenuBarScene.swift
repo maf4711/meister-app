@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Persistent menu-bar item showing the Meister Health Score.
 /// Click to open a popover with quick actions (Quick-Clean, open main window).

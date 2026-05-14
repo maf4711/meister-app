@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class OnboardingState: ObservableObject {
@@ -32,13 +32,13 @@ struct OnboardingView: View {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 0) {
                 content
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 footer
             }
             .frame(width: 540, height: 460)
             .background(.thinMaterial)
-            .squircle(MD3.Radii.lg)
-            .squircleStroke(MD3.Radii.lg, color: MD3.SemColor.divider, lineWidth: 0.5)
+            .squircle(MD4.Radii.lg)
+            .squircleStroke(MD4.Radii.lg, color: MD4.SemColor.divider, lineWidth: 0.5)
             .shadow(color: .black.opacity(0.4), radius: 30, y: 10)
         }
     }
@@ -57,17 +57,17 @@ struct OnboardingView: View {
             Spacer().frame(height: 20)
             Image(systemName: page.icon)
                 .font(.system(size: 56))
-                .foregroundStyle(MD3.SemColor.brandPrimary)
+                .foregroundStyle(MD4.SemColor.brandPrimary)
                 .padding(.bottom, 4)
             Text(page.title)
-                .font(MD3.Typo.title1)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.title1)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text(page.subtitle)
-                .font(MD3.Typo.headline)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.headline)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Text(page.body)
-                .font(MD3.Typo.body)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.body)
+                .foregroundStyle(MD4.SemColor.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             Spacer()
@@ -87,7 +87,7 @@ struct OnboardingView: View {
             HStack(spacing: 6) {
                 ForEach(0..<pages.count, id: \.self) { i in
                     Circle()
-                        .fill(i == state.currentPage ? MD3.SemColor.brandPrimary : MD3.SemColor.surfaceRaised)
+                        .fill(i == state.currentPage ? MD4.SemColor.brandPrimary : MD4.SemColor.surfaceRaised)
                         .frame(width: 7, height: 7)
                 }
             }

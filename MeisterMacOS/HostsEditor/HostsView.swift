@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class HostsModel: ObservableObject {
@@ -24,10 +24,10 @@ struct HostsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.entries.isEmpty { await model.reload() } }
     }
 
@@ -35,11 +35,11 @@ struct HostsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("/etc/hosts")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Read-only Anzeige. Edit via `sudo vi /etc/hosts` — schreibender Zugriff später.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -73,23 +73,23 @@ struct HostsView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .trailing, spacing: 0) {
                 Text(entry.ip)
-                    .font(MD3.Typo.tabular(MD3.Typo.body))
-                    .foregroundStyle(entry.isCommented ? MD3.SemColor.textTertiary : MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.body))
+                    .foregroundStyle(entry.isCommented ? MD4.SemColor.textTertiary : MD4.SemColor.textPrimary)
                 if entry.isCommented {
                     Text("auskommentiert")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                 }
             }
             .frame(width: 140, alignment: .trailing)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.hosts.joined(separator: ", "))
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(entry.isCommented ? MD3.SemColor.textTertiary : MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(entry.isCommented ? MD4.SemColor.textTertiary : MD4.SemColor.textPrimary)
                 if let c = entry.comment {
                     Text("# \(c)")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
             Spacer()

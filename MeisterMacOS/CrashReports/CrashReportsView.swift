@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// One ips/crash file from ~/Library/Logs/DiagnosticReports/.
 /// We do NOT parse the binary ips format — just expose name, size, age,
@@ -33,9 +33,9 @@ struct CrashReport: Identifiable, Hashable {
 
         var color: Color {
             switch self {
-            case .crash, .ips: return MD3.SemColor.error
-            case .spin, .hang: return MD3.SemColor.warning
-            default:           return MD3.SemColor.textSecondary
+            case .crash, .ips: return MD4.SemColor.error
+            case .spin, .hang: return MD4.SemColor.warning
+            default:           return MD4.SemColor.textSecondary
             }
         }
     }
@@ -145,10 +145,10 @@ struct CrashReportsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.reports.isEmpty { await model.reload() } }
     }
 
@@ -156,11 +156,11 @@ struct CrashReportsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Crash Reports")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("~/Library/Logs/DiagnosticReports/. Gruppiert nach Prozess — top heißt Top-Crasher.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Picker("Zeitraum", selection: $model.filter) {
@@ -192,9 +192,9 @@ struct CrashReportsView: View {
             List {
                 Section {
                     HStack {
-                        Image(systemName: "doc.on.doc.fill").foregroundStyle(MD3.SemColor.brandPrimary)
+                        Image(systemName: "doc.on.doc.fill").foregroundStyle(MD4.SemColor.brandPrimary)
                         Text("\(model.visibleReports.count) Reports · \(model.totalBytes.humanBytes)")
-                            .font(MD3.Typo.body)
+                            .font(MD4.Typo.body)
                         Spacer()
                     }
                 }
@@ -206,9 +206,9 @@ struct CrashReportsView: View {
                     } header: {
                         HStack {
                             Text(process)
-                                .font(MD3.Typo.headline)
-                                .foregroundStyle(MD3.SemColor.textPrimary)
-                            badge("\(reports.count)", reports.count > 3 ? MD3.SemColor.error : MD3.SemColor.warning)
+                                .font(MD4.Typo.headline)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
+                            badge("\(reports.count)", reports.count > 3 ? MD4.SemColor.error : MD4.SemColor.warning)
                             Spacer()
                         }
                     }
@@ -226,20 +226,20 @@ struct CrashReportsView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(report.url.lastPathComponent)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                     .textSelection(.enabled)
                     .lineLimit(1)
                 HStack(spacing: 8) {
                     Text(relativeDate(report.date))
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                     Text("·")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                     Text(report.sizeBytes.humanBytes)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
             Spacer()
@@ -257,7 +257,7 @@ struct CrashReportsView: View {
 
     private func badge(_ text: String, _ color: Color) -> some View {
         Text(text)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)

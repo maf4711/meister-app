@@ -1,6 +1,6 @@
 import SwiftUI
 import Photos
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class IOSAutoCleanModel: ObservableObject {
@@ -147,7 +147,7 @@ struct IOSAutoCleanView: View {
                 .padding(20)
             }
             .navigationTitle("Auto-Clean")
-            .background(MD3.SemColor.background)
+            .background(MD4.SemColor.background)
             .alert("Alles automatisch erledigen?",
                    isPresented: $showConfirm) {
                 Button("Abbrechen", role: .cancel) { }
@@ -170,10 +170,10 @@ struct IOSAutoCleanView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Alles erledigen")
                 .font(.system(size: 28, weight: .light))
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text("Photos auto-delete + App-Cache. Ein Tap.")
-                .font(MD3.Typo.body)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.body)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -190,7 +190,7 @@ struct IOSAutoCleanView: View {
                     Text(buttonLabel)
                         .font(.system(size: 20, weight: .semibold))
                     Text(buttonSubtitle)
-                        .font(MD3.Typo.caption)
+                        .font(MD4.Typo.caption)
                         .opacity(0.85)
                 }
                 Spacer()
@@ -199,11 +199,11 @@ struct IOSAutoCleanView: View {
             .frame(maxWidth: .infinity)
             .foregroundStyle(.white)
             .background(
-                LinearGradient(colors: [MD3.SemColor.brandPrimary, MD3.SemColor.brandStrong],
+                LinearGradient(colors: [MD4.SemColor.brandPrimary, MD4.SemColor.brandStrong],
                                startPoint: .topLeading, endPoint: .bottomTrailing),
                 in: RoundedRectangle(cornerRadius: 18, style: .continuous)
             )
-            .shadow(color: MD3.SemColor.brandPrimary.opacity(0.4), radius: 14, x: 0, y: 4)
+            .shadow(color: MD4.SemColor.brandPrimary.opacity(0.4), radius: 14, x: 0, y: 4)
         }
         .buttonStyle(.plain)
         .disabled(model.isRunning)
@@ -214,28 +214,28 @@ struct IOSAutoCleanView: View {
             ForEach(model.phaseLog) { r in
                 HStack(spacing: 10) {
                     Image(systemName: r.success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                        .foregroundStyle(r.success ? MD3.SemColor.success : MD3.SemColor.warning)
-                    Image(systemName: r.icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(r.success ? MD4.SemColor.success : MD4.SemColor.warning)
+                    Image(systemName: r.icon).foregroundStyle(MD4.SemColor.brandPrimary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(r.label)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         if r.count > 0 {
                             Text("\(r.count) item\(r.count == 1 ? "" : "s")")
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                         }
                     }
                     Spacer()
                     if r.bytes > 0 {
                         Text(r.bytes.humanBytes)
-                            .font(MD3.Typo.tabular(MD3.Typo.body))
-                            .foregroundStyle(MD3.SemColor.success)
+                            .font(MD4.Typo.tabular(MD4.Typo.body))
+                            .foregroundStyle(MD4.SemColor.success)
                     }
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(MD3.SemColor.surfaceRaised,
+                .background(MD4.SemColor.surfaceRaised,
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             if case .scanning(let label) = model.phase {
@@ -246,8 +246,8 @@ struct IOSAutoCleanView: View {
             }
             if model.phase == .done {
                 Text("Fertig — \(model.totalReclaimedBytes.humanBytes) reclaimed")
-                    .font(MD3.Typo.title3)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.title3)
+                    .foregroundStyle(MD4.SemColor.success)
                     .padding(.top, 4)
             }
         }
@@ -257,13 +257,13 @@ struct IOSAutoCleanView: View {
         HStack {
             ProgressView().controlSize(.small)
             Text(label)
-                .font(MD3.Typo.body)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.body)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Spacer()
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 

@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct NetConnection: Identifiable, Hashable {
     let id: String
@@ -140,12 +140,12 @@ struct NetworkConnectionsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             controls
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.connections.isEmpty { await model.reload() } }
     }
 
@@ -153,11 +153,11 @@ struct NetworkConnectionsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Network Connections")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("lsof -i — wer hat grade welche Sockets offen.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -172,18 +172,18 @@ struct NetworkConnectionsView: View {
         HStack(spacing: 8) {
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 TextField("Filter…", text: $model.query)
                     .textFieldStyle(.plain)
             }
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(MD3.SemColor.surfaceRaised, in: Capsule())
+            .background(MD4.SemColor.surfaceRaised, in: Capsule())
             Toggle("Nur ESTABLISHED", isOn: $model.showOnlyEstablished)
                 .toggleStyle(.button)
             Spacer()
             Text("\(model.filtered.count) Verbindungen")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.horizontal, 20).padding(.vertical, 10)
     }
@@ -192,33 +192,33 @@ struct NetworkConnectionsView: View {
         List(model.filtered) { c in
             HStack(spacing: 10) {
                 Image(systemName: c.state == "ESTABLISHED" ? "arrow.left.arrow.right.circle.fill" : "circle.dotted")
-                    .foregroundStyle(c.state == "ESTABLISHED" ? MD3.SemColor.success : MD3.SemColor.textSecondary)
+                    .foregroundStyle(c.state == "ESTABLISHED" ? MD4.SemColor.success : MD4.SemColor.textSecondary)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
                         Text(c.processName)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("(\(c.pid.map(String.init) ?? "?"))")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textTertiary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textTertiary)
                     }
                     Text(c.localAddress + (c.remoteAddress.map { " → \($0)" } ?? ""))
-                        .font(MD3.Typo.tabular(MD3.Typo.caption))
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.tabular(MD4.Typo.caption))
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
                 Spacer()
                 Text(c.proto)
-                    .font(MD3.Typo.caption.bold())
+                    .font(MD4.Typo.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(MD3.SemColor.surfaceRaised, in: Capsule())
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .background(MD4.SemColor.surfaceRaised, in: Capsule())
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 Text(c.state)
-                    .font(MD3.Typo.caption.bold())
+                    .font(MD4.Typo.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background((c.state == "ESTABLISHED" ? MD3.SemColor.success : MD3.SemColor.textTertiary).opacity(0.18), in: Capsule())
-                    .foregroundStyle(c.state == "ESTABLISHED" ? MD3.SemColor.success : MD3.SemColor.textTertiary)
+                    .background((c.state == "ESTABLISHED" ? MD4.SemColor.success : MD4.SemColor.textTertiary).opacity(0.18), in: Capsule())
+                    .foregroundStyle(c.state == "ESTABLISHED" ? MD4.SemColor.success : MD4.SemColor.textTertiary)
             }
             .padding(.vertical, 2)
         }

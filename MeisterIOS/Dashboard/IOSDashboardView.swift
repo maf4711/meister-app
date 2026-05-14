@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class IOSDashboardModel: ObservableObject {
@@ -48,7 +48,7 @@ struct IOSDashboardView: View {
             }
             .padding(20)
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.snapshot == nil { await model.reload() } }
         .refreshable { await model.reload() }
     }
@@ -57,18 +57,18 @@ struct IOSDashboardView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Meister")
                 .font(.system(size: 32, weight: .light))
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             if let s = model.snapshot {
                 HStack(spacing: 6) {
                     Image(systemName: s.runtimeKind.icon)
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                     Text(s.runtimeKind.label)
-                        .font(MD3.Typo.caption.bold())
+                        .font(MD4.Typo.caption.bold())
                     Text("·")
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                     Text("\(s.modelName) · \(s.osName) \(s.osVersion)")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
         }
@@ -82,15 +82,15 @@ struct IOSDashboardView: View {
                 .overlay {
                     VStack(spacing: 0) {
                         NumberFlow(model.score, font: .system(size: 48, weight: .light))
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("/ 100")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                 }
             Text(model.snapshot.map { _ in scoreVerdict() } ?? "Berechne…")
-                .font(MD3.Typo.small)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.small)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -132,23 +132,23 @@ struct IOSDashboardView: View {
     private func tile(_ title: String, icon: String, primary: String, secondary: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(title.uppercased())
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 Spacer()
             }
             Text(primary)
-                .font(MD3.Typo.tabular(MD3.Typo.title3))
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.tabular(MD4.Typo.title3))
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text(secondary)
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
                 .lineLimit(2)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 

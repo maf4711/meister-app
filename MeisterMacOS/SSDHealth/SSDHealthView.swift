@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct SSDInfo: Identifiable, Hashable {
     let id: String           // device node, e.g. /dev/disk0
@@ -103,10 +103,10 @@ struct SSDHealthView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.disks.isEmpty { await model.reload() } }
     }
 
@@ -114,11 +114,11 @@ struct SSDHealthView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Disk Health")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("S.M.A.R.T.-Status pro Disk via diskutil. Verified = OK, Failing = sofort Backup + Disk-Tausch.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -153,14 +153,14 @@ struct SSDHealthView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: d.isInternal ? "internaldrive" : "externaldrive")
-                    .foregroundStyle(MD3.SemColor.brandPrimary)
+                    .foregroundStyle(MD4.SemColor.brandPrimary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(d.name)
-                        .font(MD3.Typo.headline)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.headline)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Text("\(d.id) · \(d.media) · \(d.protocolName)")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 Spacer()
                 smartBadge(d.smart)
@@ -174,24 +174,24 @@ struct SSDHealthView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func smartBadge(_ s: SSDInfo.SMARTStatus) -> some View {
         let (label, color, icon): (String, Color, String) = {
             switch s {
-            case .verified:     return ("Verified", MD3.SemColor.success, "checkmark.shield.fill")
-            case .failing:      return ("Failing — Backup + Tausch", MD3.SemColor.error, "exclamationmark.triangle.fill")
-            case .notSupported: return ("kein S.M.A.R.T.", MD3.SemColor.textTertiary, "questionmark.circle")
-            case .unknown:      return ("unbekannt", MD3.SemColor.textTertiary, "questionmark.circle")
+            case .verified:     return ("Verified", MD4.SemColor.success, "checkmark.shield.fill")
+            case .failing:      return ("Failing — Backup + Tausch", MD4.SemColor.error, "exclamationmark.triangle.fill")
+            case .notSupported: return ("kein S.M.A.R.T.", MD4.SemColor.textTertiary, "questionmark.circle")
+            case .unknown:      return ("unbekannt", MD4.SemColor.textTertiary, "questionmark.circle")
             }
         }()
         return HStack(spacing: 4) {
             Image(systemName: icon)
             Text(label)
         }
-        .font(MD3.Typo.caption.bold())
+        .font(MD4.Typo.caption.bold())
         .padding(.horizontal, 8).padding(.vertical, 4)
         .background(color.opacity(0.18), in: Capsule())
         .foregroundStyle(color)
@@ -200,11 +200,11 @@ struct SSDHealthView: View {
     private func stat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label.uppercased())
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Text(value)
-                .font(MD3.Typo.tabular(MD3.Typo.body))
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.tabular(MD4.Typo.body))
+                .foregroundStyle(MD4.SemColor.textPrimary)
         }
         .padding(.trailing, 16)
     }

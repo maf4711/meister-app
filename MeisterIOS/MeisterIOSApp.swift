@@ -1,14 +1,14 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @main
 struct MeisterIOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .tint(MD3.SemColor.brandPrimary)
+                .tint(MD4.SemColor.brandPrimary)
                 .preferredColorScheme(.dark)
-                .background(MD3.SemColor.background.ignoresSafeArea())
+                .background(MD4.SemColor.background.ignoresSafeArea())
         }
     }
 }
