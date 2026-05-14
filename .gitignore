@@ -6,9 +6,9 @@ DerivedData/
 build/
 
 # Swift Package Manager
+Packages/
 .build/
 .swiftpm/
-Packages/
 Package.resolved
 
 # macOS
@@ -16,3 +16,10 @@ Package.resolved
 
 __pycache__/
 *.pyc
+
+# Local agent/build/cache state
+.claude/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.tsbuildinfo
