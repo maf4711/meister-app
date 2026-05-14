@@ -26,3 +26,6 @@ __pycache__/
 
 # Local automation locks
 .auto-ship.lock
+
+# Git worktrees
+.worktrees/
