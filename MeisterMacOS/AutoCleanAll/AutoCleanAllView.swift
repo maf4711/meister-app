@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// "Alles erledigen" — runs every safe-default cleanup the Mac app supports
 /// in one go. Single big button, phase-by-phase progress.
@@ -142,11 +142,11 @@ struct AutoCleanAllView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
-        .sparkleBurst(trigger: celebrate, color: MD3.SemColor.success)
+        .background(MD4.SemColor.background)
+        .sparkleBurst(trigger: celebrate, color: MD4.SemColor.success)
         .onChange(of: model.phase) { _, new in
             if new == .done && model.bytesReclaimed > 0 { celebrate.toggle() }
         }
@@ -165,11 +165,11 @@ struct AutoCleanAllView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Auto-Clean Alles")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Ein Klick → System-Cleanup + Browser-Caches + Junk-Files + Papierkorb. Erledigt.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
         }
@@ -199,7 +199,7 @@ struct AutoCleanAllView: View {
                     Text(buttonLabel)
                         .font(.system(size: 22, weight: .semibold))
                     Text(buttonSubtitle)
-                        .font(MD3.Typo.caption)
+                        .font(MD4.Typo.caption)
                         .opacity(0.85)
                 }
             }
@@ -207,11 +207,11 @@ struct AutoCleanAllView: View {
             .frame(minWidth: 380)
             .foregroundStyle(.white)
             .background(
-                LinearGradient(colors: [MD3.SemColor.brandPrimary, MD3.SemColor.brandStrong],
+                LinearGradient(colors: [MD4.SemColor.brandPrimary, MD4.SemColor.brandStrong],
                                startPoint: .topLeading, endPoint: .bottomTrailing),
                 in: ContinuousSquircle(cornerRadius: 22)
             )
-            .shadow(color: MD3.SemColor.brandPrimary.opacity(0.5), radius: 22, x: 0, y: 8)
+            .shadow(color: MD4.SemColor.brandPrimary.opacity(0.5), radius: 22, x: 0, y: 8)
         }
         .buttonStyle(.plain)
         .disabled(model.isRunning)
@@ -226,13 +226,13 @@ struct AutoCleanAllView: View {
                 HStack(spacing: 10) {
                     ProgressView().controlSize(.small)
                     Text(label)
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Spacer()
                 }
                 .padding(12)
                 .frame(maxWidth: 520)
-                .background(MD3.SemColor.surfaceRaised,
+                .background(MD4.SemColor.surfaceRaised,
                             in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             if model.phase == .done {
@@ -244,30 +244,30 @@ struct AutoCleanAllView: View {
     private func phaseRow(_ r: AutoCleanAllModel.PhaseResult) -> some View {
         HStack(spacing: 10) {
             Image(systemName: r.success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(r.success ? MD3.SemColor.success : MD3.SemColor.warning)
-            Image(systemName: r.icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                .foregroundStyle(r.success ? MD4.SemColor.success : MD4.SemColor.warning)
+            Image(systemName: r.icon).foregroundStyle(MD4.SemColor.brandPrimary)
             Text(r.label)
-                .font(MD3.Typo.body)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.body)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Spacer()
             Text(r.bytes > 0 ? r.bytes.humanBytes : (r.success ? "—" : "fail"))
-                .font(MD3.Typo.tabular(MD3.Typo.body))
-                .foregroundStyle(r.bytes > 0 ? MD3.SemColor.success : MD3.SemColor.textSecondary)
+                .font(MD4.Typo.tabular(MD4.Typo.body))
+                .foregroundStyle(r.bytes > 0 ? MD4.SemColor.success : MD4.SemColor.textSecondary)
         }
         .padding(12)
         .frame(maxWidth: 520)
-        .background(MD3.SemColor.surfaceRaised.opacity(0.6),
+        .background(MD4.SemColor.surfaceRaised.opacity(0.6),
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var summary: some View {
         VStack(spacing: 4) {
             Text("Fertig — \(model.bytesReclaimed.humanBytes) reclaimed")
-                .font(MD3.Typo.title3)
-                .foregroundStyle(MD3.SemColor.success)
+                .font(MD4.Typo.title3)
+                .foregroundStyle(MD4.SemColor.success)
             Text("Mit Undo Last Cleanup zurückholbar (außer Trash-Inhalt).")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.top, 8)
     }

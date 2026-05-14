@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct ICloudStatus: Equatable {
     let drivePath: String?
@@ -101,10 +101,10 @@ struct ICloudSyncView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.status == nil { await model.reload() } }
     }
 
@@ -112,11 +112,11 @@ struct ICloudSyncView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("iCloud Drive")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Sync-Status, downloaded vs nicht-downloaded Bytes, Account-Login.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -147,40 +147,40 @@ struct ICloudSyncView: View {
     private func accountCard(_ s: ICloudStatus) -> some View {
         HStack(spacing: 14) {
             Image(systemName: s.signedIn ? "icloud.fill" : "icloud.slash")
-                .foregroundStyle(s.signedIn ? MD3.SemColor.brandPrimary : MD3.SemColor.textSecondary)
+                .foregroundStyle(s.signedIn ? MD4.SemColor.brandPrimary : MD4.SemColor.textSecondary)
                 .font(.title)
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.signedIn ? "iCloud signed in" : "Not signed in to iCloud")
-                    .font(MD3.Typo.title3)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title3)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 if let path = s.drivePath {
                     Text(path)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(1).truncationMode(.middle)
                 } else {
                     Text("iCloud Drive ist nicht aktiviert")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.warning)
                 }
             }
             Spacer()
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func usageCard(_ s: ICloudStatus) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Speicher in iCloud Drive")
-                .font(MD3.Typo.headline)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.headline)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             HStack(spacing: 16) {
-                metric("Total", s.totalBytes, color: MD3.SemColor.brandPrimary)
-                metric("Downloaded", s.downloadedBytes, color: MD3.SemColor.success)
-                metric("Pending", s.pendingBytes, color: MD3.SemColor.warning)
+                metric("Total", s.totalBytes, color: MD4.SemColor.brandPrimary)
+                metric("Downloaded", s.downloadedBytes, color: MD4.SemColor.success)
+                metric("Pending", s.pendingBytes, color: MD4.SemColor.warning)
             }
             // Stacked bar
             GeometryReader { geo in
@@ -188,10 +188,10 @@ struct ICloudSyncView: View {
                 let dlW = CGFloat(Double(s.downloadedBytes) / total) * geo.size.width
                 let pendW = CGFloat(Double(s.pendingBytes) / total) * geo.size.width
                 ZStack(alignment: .leading) {
-                    Capsule().fill(MD3.SemColor.surfaceRaised)
+                    Capsule().fill(MD4.SemColor.surfaceRaised)
                     HStack(spacing: 0) {
-                        Capsule().fill(MD3.SemColor.success).frame(width: dlW)
-                        Capsule().fill(MD3.SemColor.warning).frame(width: pendW)
+                        Capsule().fill(MD4.SemColor.success).frame(width: dlW)
+                        Capsule().fill(MD4.SemColor.warning).frame(width: pendW)
                     }
                 }
             }
@@ -199,17 +199,17 @@ struct ICloudSyncView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func metric(_ label: String, _ bytes: Int64, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label.uppercased())
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Text(bytes.humanBytes)
-                .font(MD3.Typo.tabular(MD3.Typo.body))
+                .font(MD4.Typo.tabular(MD4.Typo.body))
                 .foregroundStyle(color)
         }
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class DuplicatesModel: ObservableObject {
@@ -76,12 +76,12 @@ struct DuplicatesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             footer
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .alert("Duplikate in den Papierkorb?",
                isPresented: $showConfirm) {
             Button("Abbrechen", role: .cancel) { }
@@ -103,11 +103,11 @@ struct DuplicatesView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Duplicate Finder")
-                        .font(MD3.Typo.title2)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.title2)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Text("Identische Dateien finden — gleiche Größe + gleicher SHA256.")
-                        .font(MD3.Typo.small)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.small)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 Spacer()
                 Button {
@@ -119,8 +119,8 @@ struct DuplicatesView: View {
             }
             HStack {
                 Text("Min. Größe: \(Int(model.minSizeMB)) MB")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 Slider(value: $model.minSizeMB, in: 1...500, step: 1)
                     .frame(maxWidth: 240)
             }
@@ -148,11 +148,11 @@ struct DuplicatesView: View {
                     } header: {
                         HStack {
                             Text("\(group.files.count) × \(group.bytes.humanBytes)")
-                                .font(MD3.Typo.caption.bold())
+                                .font(MD4.Typo.caption.bold())
                             Spacer()
                             Text("verschwendet: \(group.wastedBytes.humanBytes)")
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.warning)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.warning)
                         }
                     }
                 }
@@ -166,15 +166,15 @@ struct DuplicatesView: View {
         let isKept = model.keep[group.hash] == url
         return HStack(spacing: 10) {
             Image(systemName: isKept ? "lock.fill" : "trash")
-                .foregroundStyle(isKept ? MD3.SemColor.success : MD3.SemColor.textTertiary)
+                .foregroundStyle(isKept ? MD4.SemColor.success : MD4.SemColor.textTertiary)
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(url.lastPathComponent)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(url.deletingLastPathComponent().path)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -197,18 +197,18 @@ struct DuplicatesView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Reclaimable")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .textCase(.uppercase)
                 Text(model.totalReclaimable.humanBytes)
-                    .font(MD3.Typo.tabular(MD3.Typo.headline))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.headline))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
             }
             Spacer()
             if model.lastReclaimed > 0 {
                 Text("Letzter Lauf: \(model.lastReclaimed.humanBytes)")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.success)
                     .padding(.trailing, 12)
             }
             Button("Verlierer in Papierkorb") {

@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct USBDevice: Identifiable, Hashable {
     let id: String
@@ -69,10 +69,10 @@ struct USBDevicesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.devices.isEmpty { await model.reload() } }
     }
 
@@ -80,11 +80,11 @@ struct USBDevicesView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("USB Devices")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Was hängt grade dran und mit welcher Geschwindigkeit.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -108,22 +108,22 @@ struct USBDevicesView: View {
             List(model.devices) { d in
                 HStack(spacing: 12) {
                     Image(systemName: "cable.connector")
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                         .frame(width: 24)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(d.name)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("\(d.manufacturer) · \(d.location)")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Spacer()
                     Text(d.speed)
-                        .font(MD3.Typo.caption.bold())
+                        .font(MD4.Typo.caption.bold())
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(MD3.SemColor.surfaceRaised, in: Capsule())
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .background(MD4.SemColor.surfaceRaised, in: Capsule())
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 .padding(.vertical, 4)
             }

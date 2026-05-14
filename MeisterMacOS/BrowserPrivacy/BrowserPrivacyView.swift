@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class BrowserPrivacyModel: ObservableObject {
@@ -52,12 +52,12 @@ struct BrowserPrivacyView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             footer
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.entries.isEmpty { await model.scan() } }
         .alert("History/Cookies in Papierkorb?",
                isPresented: $showConfirm) {
@@ -74,11 +74,11 @@ struct BrowserPrivacyView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Browser Privacy")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("History, Cookies, Downloads-Listen und Caches pro Browser. Alles in den Trash.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.scan() } } label: {
@@ -104,14 +104,14 @@ struct BrowserPrivacyView: View {
                         HStack {
                             Image(systemName: browser.symbol)
                             Text(browser.displayName)
-                                .font(MD3.Typo.headline)
+                                .font(MD4.Typo.headline)
                             Spacer()
                             Button("alles") { model.toggleBrowser(browser) }
                                 .buttonStyle(.borderless)
-                                .font(MD3.Typo.caption)
+                                .font(MD4.Typo.caption)
                             Text(items.reduce(0) { $0 + $1.bytes }.humanBytes)
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                         }
                     }
                 }
@@ -139,16 +139,16 @@ struct BrowserPrivacyView: View {
             .labelsHidden()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.target.label)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(entry.path.lastPathComponent)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Text(entry.bytes.humanBytes)
-                .font(MD3.Typo.tabular(MD3.Typo.caption))
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.tabular(MD4.Typo.caption))
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.vertical, 2)
     }
@@ -156,13 +156,13 @@ struct BrowserPrivacyView: View {
     private var footer: some View {
         HStack {
             Text("\(model.selected.count) ausgewählt · \(model.selectedBytes.humanBytes)")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Spacer()
             if model.lastReclaimed > 0 {
                 Text("Letzter Lauf: \(model.lastReclaimed.humanBytes)")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.success)
                     .padding(.trailing, 12)
             }
             Button("In Papierkorb") {

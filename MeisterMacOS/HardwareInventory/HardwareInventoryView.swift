@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct HardwareSection: Identifiable, Hashable {
     let id: String
@@ -190,10 +190,10 @@ struct HardwareInventoryView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.sections.isEmpty { await model.reload() } }
     }
 
@@ -201,11 +201,11 @@ struct HardwareInventoryView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Hardware Inventory")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("system_profiler-Daten in lesbar. CPU, Memory, Storage, GPU, Network, OS.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -235,21 +235,21 @@ struct HardwareInventoryView: View {
     private func sectionCard(_ s: HardwareSection) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: s.icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: s.icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(s.title)
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Spacer()
             }
             ForEach(Array(s.rows.enumerated()), id: \.offset) { _, pair in
                 HStack(alignment: .top) {
                     Text(pair.0)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .frame(width: 110, alignment: .leading)
                     Text(pair.1)
-                        .font(MD3.Typo.tabular(MD3.Typo.small))
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.tabular(MD4.Typo.small))
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                         .lineLimit(2)
                         .truncationMode(.tail)
                     Spacer()
@@ -258,7 +258,7 @@ struct HardwareInventoryView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

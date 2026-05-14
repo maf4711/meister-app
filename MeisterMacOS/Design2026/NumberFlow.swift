@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Animated numeric counter — counts up to its `value` smoothly when first
 /// shown, and tweens between values when `value` changes. Tabular numerics
@@ -10,7 +10,7 @@ struct NumberFlow: View {
     var suffix: String = ""
     var decimals: Int = 0
     var duration: Double = 1.4
-    var font: Font = MD3.Typo.title1
+    var font: Font = MD4.Typo.title1
 
     @State private var displayed: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -20,7 +20,7 @@ struct NumberFlow: View {
          suffix: String = "",
          decimals: Int = 0,
          duration: Double = 1.4,
-         font: Font = MD3.Typo.title1) {
+         font: Font = MD4.Typo.title1) {
         self.value = value
         self.prefix = prefix
         self.suffix = suffix
@@ -33,7 +33,7 @@ struct NumberFlow: View {
     init(_ value: Int,
          prefix: String = "",
          suffix: String = "",
-         font: Font = MD3.Typo.title1) {
+         font: Font = MD4.Typo.title1) {
         self.init(value: Double(value),
                   prefix: prefix,
                   suffix: suffix,
@@ -80,7 +80,7 @@ struct NumberFlow: View {
 #Preview {
     VStack(spacing: 16) {
         NumberFlow(value: 1_284_902, prefix: "$")
-        NumberFlow(value: 4.82, prefix: "$", decimals: 2, font: MD3.Typo.title2)
+        NumberFlow(value: 4.82, prefix: "$", decimals: 2, font: MD4.Typo.title2)
         NumberFlow(85, suffix: "/100")
     }
     .padding(40)

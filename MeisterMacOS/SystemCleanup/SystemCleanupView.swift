@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class SystemCleanupModel: ObservableObject {
@@ -66,13 +66,13 @@ struct SystemCleanupView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             footer
         }
-        .background(MD3.SemColor.background)
-        .sparkleBurst(trigger: celebrate, color: MD3.SemColor.success)
+        .background(MD4.SemColor.background)
+        .sparkleBurst(trigger: celebrate, color: MD4.SemColor.success)
         .task {
             if model.scans.isEmpty { await model.scan() }
         }
@@ -103,11 +103,11 @@ struct SystemCleanupView: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("System Cleanup")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Caches, logs, and dev junk that the system regenerates on demand.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button {
@@ -128,8 +128,8 @@ struct SystemCleanupView: View {
             VStack(spacing: 12) {
                 ProgressView()
                 Text("Scanning…")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -155,24 +155,24 @@ struct SystemCleanupView: View {
 
             Image(systemName: scan.category.symbol)
                 .frame(width: 24)
-                .foregroundStyle(MD3.SemColor.brandPrimary)
+                .foregroundStyle(MD4.SemColor.brandPrimary)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(scan.category.title)
-                    .font(MD3.Typo.body)
+                    .font(MD4.Typo.body)
                     .foregroundStyle(scan.bytes == 0
-                                     ? MD3.SemColor.textTertiary
-                                     : MD3.SemColor.textPrimary)
+                                     ? MD4.SemColor.textTertiary
+                                     : MD4.SemColor.textPrimary)
                 if scan.itemCount > 0 {
                     Text("\(scan.itemCount) item\(scan.itemCount == 1 ? "" : "s")")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
             Spacer()
             Text(scan.bytes == 0 ? "—" : scan.bytes.humanBytes)
-                .font(MD3.Typo.tabular(MD3.Typo.body))
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.tabular(MD4.Typo.body))
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.vertical, 4)
     }
@@ -183,18 +183,18 @@ struct SystemCleanupView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Selected")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .textCase(.uppercase)
                 Text(model.totalSelectedBytes.humanBytes)
-                    .font(MD3.Typo.tabular(MD3.Typo.headline))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.headline))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
             }
             Spacer()
             if let manifest = model.lastManifest {
                 Text("Last clean: \(manifest.totalReclaimedBytes.humanBytes)")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.success)
                     .padding(.trailing, 12)
             }
             Button {

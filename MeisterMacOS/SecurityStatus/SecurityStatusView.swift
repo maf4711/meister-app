@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class SecurityStatusModel: ObservableObject {
@@ -21,10 +21,10 @@ struct SecurityStatusView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.checks.isEmpty { await model.reload() } }
     }
 
@@ -32,11 +32,11 @@ struct SecurityStatusView: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Security Status")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("FileVault, Firewall, Gatekeeper, SIP, XProtect, Quarantine — read-only.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -72,11 +72,11 @@ struct SecurityStatusView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(check.title)
-                        .font(MD3.Typo.headline)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.headline)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Spacer()
                     Text(label)
-                        .font(MD3.Typo.caption.bold())
+                        .font(MD4.Typo.caption.bold())
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
                         .background(color.opacity(0.2), in: Capsule())
@@ -84,8 +84,8 @@ struct SecurityStatusView: View {
                 }
                 if let detail = check.detail, !detail.isEmpty {
                     Text(detail)
-                        .font(MD3.Typo.small)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.small)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(3)
                 }
                 if let action = check.action {
@@ -93,7 +93,7 @@ struct SecurityStatusView: View {
                         NSWorkspace.shared.open(action.url)
                     }
                     .buttonStyle(.borderless)
-                    .foregroundStyle(MD3.SemColor.brandPrimary)
+                    .foregroundStyle(MD4.SemColor.brandPrimary)
                 }
             }
         }
@@ -102,10 +102,10 @@ struct SecurityStatusView: View {
 
     private func stateInfo(_ s: SecurityState) -> (Color, String, String) {
         switch s {
-        case .ok(let l):     return (MD3.SemColor.success, l, "checkmark.shield.fill")
-        case .warn(let l):   return (MD3.SemColor.warning, l, "exclamationmark.triangle.fill")
-        case .bad(let l):    return (MD3.SemColor.error,   l, "xmark.shield.fill")
-        case .unknown(let l):return (MD3.SemColor.textSecondary, l, "questionmark.circle")
+        case .ok(let l):     return (MD4.SemColor.success, l, "checkmark.shield.fill")
+        case .warn(let l):   return (MD4.SemColor.warning, l, "exclamationmark.triangle.fill")
+        case .bad(let l):    return (MD4.SemColor.error,   l, "xmark.shield.fill")
+        case .unknown(let l):return (MD4.SemColor.textSecondary, l, "questionmark.circle")
         }
     }
 }

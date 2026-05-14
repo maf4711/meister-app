@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class KeychainAuditModel: ObservableObject {
@@ -23,10 +23,10 @@ struct KeychainAuditView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.summaries.isEmpty { await model.reload() } }
     }
 
@@ -34,11 +34,11 @@ struct KeychainAuditView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Keychain Audit")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Item-Statistik pro Keychain — Metadaten only, keine Decrypt-Prompts.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -69,10 +69,10 @@ struct KeychainAuditView: View {
 
     private var summaryHeader: some View {
         HStack {
-            Image(systemName: "key.horizontal.fill").foregroundStyle(MD3.SemColor.brandPrimary)
+            Image(systemName: "key.horizontal.fill").foregroundStyle(MD4.SemColor.brandPrimary)
             Text("\(model.totalItems) Items in \(model.summaries.count) Keychain\(model.summaries.count == 1 ? "" : "s")")
-                .font(MD3.Typo.headline)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.headline)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Spacer()
             Button("Open Keychain Access") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Keychain Access.app"))
@@ -81,42 +81,42 @@ struct KeychainAuditView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func keychainCard(_ s: KeychainSummary) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "lock.shield").foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: "lock.shield").foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(s.displayName)
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Spacer()
                 Text("\(s.totalItems) items")
-                    .font(MD3.Typo.tabular(MD3.Typo.body))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.body))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
             }
             grid(s)
             Text(s.path)
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textTertiary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textTertiary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             HStack {
                 Text(s.sizeBytes.humanBytes)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 if let m = s.lastModified {
                     Text("· geändert \(m.formatted(date: .abbreviated, time: .omitted))")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
@@ -131,14 +131,14 @@ struct KeychainAuditView: View {
 
     private func cell(_ label: String, _ value: String, _ icon: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon).foregroundStyle(MD3.SemColor.textSecondary).font(.caption)
+            Image(systemName: icon).foregroundStyle(MD4.SemColor.textSecondary).font(.caption)
             VStack(alignment: .leading, spacing: 0) {
                 Text(value)
-                    .font(MD3.Typo.tabular(MD3.Typo.body))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.body))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(label)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
         }
     }

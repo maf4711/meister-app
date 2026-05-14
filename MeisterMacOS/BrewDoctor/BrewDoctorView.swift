@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct BrewIssue: Identifiable, Hashable {
     let id: String
@@ -124,10 +124,10 @@ struct BrewDoctorView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.brewPath == nil { await model.reload() } }
     }
 
@@ -135,11 +135,11 @@ struct BrewDoctorView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Brew Doctor")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("brew doctor + brew outdated. Cleanup-Button räumt alte Versionen.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if model.brewPath != nil {
@@ -174,8 +174,8 @@ struct BrewDoctorView: View {
                     }
                     if let action = model.lastAction {
                         Text(action)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.success)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.success)
                     }
                 }
                 .padding(20)
@@ -186,48 +186,48 @@ struct BrewDoctorView: View {
     private var statusCard: some View {
         HStack {
             Image(systemName: model.issues.isEmpty ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(model.issues.isEmpty ? MD3.SemColor.success : MD3.SemColor.warning)
+                .foregroundStyle(model.issues.isEmpty ? MD4.SemColor.success : MD4.SemColor.warning)
                 .font(.title2)
             VStack(alignment: .leading, spacing: 2) {
                 Text(model.issues.isEmpty ? "Brew is healthy" : "\(model.issues.count) Hinweis\(model.issues.count == 1 ? "" : "e")")
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("\(model.outdated.count) Pakete outdated · \(model.brewPath ?? "—")")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var issuesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Doctor Output")
-                .font(MD3.Typo.headline)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.headline)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             ForEach(model.issues) { issue in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: issue.level == .error ? "xmark.octagon" : "exclamationmark.triangle")
-                            .foregroundStyle(issue.level == .error ? MD3.SemColor.error : MD3.SemColor.warning)
+                            .foregroundStyle(issue.level == .error ? MD4.SemColor.error : MD4.SemColor.warning)
                         Text(issue.title)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                     }
                     if let d = issue.detail {
                         Text(d)
-                            .font(MD3.Typo.small)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.small)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                             .padding(.leading, 24)
                     }
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(MD3.SemColor.surfaceRaised.opacity(0.5),
+                .background(MD4.SemColor.surfaceRaised.opacity(0.5),
                             in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
@@ -236,15 +236,15 @@ struct BrewDoctorView: View {
     private var outdatedSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Outdated Packages")
-                .font(MD3.Typo.headline)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.headline)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             ForEach(model.outdated, id: \.self) { name in
                 HStack {
                     Image(systemName: "shippingbox")
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .foregroundStyle(MD4.SemColor.warning)
                     Text(name)
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Spacer()
                 }
                 .padding(.vertical, 2)

@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Apple Design 2026 — ambient mesh-gradient background.
 /// Slow drift creates a sense of depth without distraction. Falls back to
@@ -13,7 +13,7 @@ struct MeshBackground: View {
     var body: some View {
         Group {
             if reduceTransparency {
-                MD3.SemColor.background
+                MD4.SemColor.background
             } else if #available(macOS 15.0, iOS 18.0, *) {
                 meshLayer
             } else {
@@ -38,15 +38,15 @@ struct MeshBackground: View {
                 [0.0, 1.0], [0.5 - 0.05 * cos(drift), 1.0],         [1.0, 1.0],
             ].map { SIMD2<Float>(Float($0[0]), Float($0[1])) },
             colors: [
-                MD3.SemColor.background,
-                MD3.SemColor.surface,
-                MD3.SemColor.background,
-                MD3.SemColor.brandPrimary.opacity(intensity * 0.30),
-                MD3.SemColor.brandStrong.opacity(intensity * 0.18),
-                MD3.SemColor.surfaceRaised,
-                MD3.SemColor.background,
-                MD3.SemColor.surface.opacity(0.9),
-                MD3.SemColor.background,
+                MD4.SemColor.background,
+                MD4.SemColor.surface,
+                MD4.SemColor.background,
+                MD4.SemColor.brandPrimary.opacity(intensity * 0.30),
+                MD4.SemColor.brandStrong.opacity(intensity * 0.18),
+                MD4.SemColor.surfaceRaised,
+                MD4.SemColor.background,
+                MD4.SemColor.surface.opacity(0.9),
+                MD4.SemColor.background,
             ]
         )
         .onAppear {
@@ -60,9 +60,9 @@ struct MeshBackground: View {
     private var fallbackLayer: some View {
         LinearGradient(
             stops: [
-                .init(color: MD3.SemColor.background, location: 0.0),
-                .init(color: MD3.SemColor.surface,    location: 0.5),
-                .init(color: MD3.SemColor.background, location: 1.0),
+                .init(color: MD4.SemColor.background, location: 0.0),
+                .init(color: MD4.SemColor.surface,    location: 0.5),
+                .init(color: MD4.SemColor.background, location: 1.0),
             ],
             startPoint: .top, endPoint: .bottom
         )

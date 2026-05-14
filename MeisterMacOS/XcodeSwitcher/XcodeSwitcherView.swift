@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct XcodeInstall: Identifiable, Hashable {
     let id: String        // path
@@ -90,10 +90,10 @@ struct XcodeSwitcherView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.installs.isEmpty { await model.reload() } }
     }
 
@@ -101,11 +101,11 @@ struct XcodeSwitcherView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Xcode Version Switcher")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Alle installierten Xcodes. Aktivierung via xcode-select braucht sudo — Befehl wird in die Zwischenablage kopiert.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -129,26 +129,26 @@ struct XcodeSwitcherView: View {
             List(model.installs) { x in
                 HStack {
                     Image(systemName: "hammer.fill")
-                        .foregroundStyle(x.isActive ? MD3.SemColor.success : MD3.SemColor.brandPrimary)
+                        .foregroundStyle(x.isActive ? MD4.SemColor.success : MD4.SemColor.brandPrimary)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack {
                             Text(x.displayName)
-                                .font(MD3.Typo.body)
-                                .foregroundStyle(MD3.SemColor.textPrimary)
+                                .font(MD4.Typo.body)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
                             if x.isActive {
                                 Text("aktiv")
-                                    .font(MD3.Typo.caption.bold())
+                                    .font(MD4.Typo.caption.bold())
                                     .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .background(MD3.SemColor.success.opacity(0.18), in: Capsule())
-                                    .foregroundStyle(MD3.SemColor.success)
+                                    .background(MD4.SemColor.success.opacity(0.18), in: Capsule())
+                                    .foregroundStyle(MD4.SemColor.success)
                             }
                         }
                         Text("v\(x.version ?? "—") \(x.build.map { "(\($0))" } ?? "")")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                         Text(x.path.path)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textTertiary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textTertiary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }

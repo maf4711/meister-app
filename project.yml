@@ -13,8 +13,8 @@ options:
 packages:
   MeisterKit:
     path: Packages/MeisterKit
-  MeradOSDesign3:
-    path: ../meradOS/merados-design3
+  MeradOSDesign4:
+    path: ../meradOS/merados-design4
 
 settings:
   base:
@@ -81,7 +81,7 @@ targets:
         DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
     dependencies:
       - target: MeisterWidget
-      - package: MeradOSDesign3
+      - package: MeradOSDesign4
 
   # Native macOS app — standalone, shells out to bash-meister + native Swift modules
   MeisterMacOS:
@@ -113,7 +113,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
     dependencies:
       - package: MeisterKit
-      - package: MeradOSDesign3
+      - package: MeradOSDesign4
 
   MeisterWidget:
     type: app-extension

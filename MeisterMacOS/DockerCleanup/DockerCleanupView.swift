@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct DockerUsage: Equatable {
     let images: Stat
@@ -153,10 +153,10 @@ struct DockerCleanupView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.usage == nil { await model.reload() } }
         .alert("Docker komplett aufräumen?", isPresented: $showConfirm) {
             Button("Abbrechen", role: .cancel) { }
@@ -172,11 +172,11 @@ struct DockerCleanupView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Docker Cleanup")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("docker system df + system prune. Reclaimt typischerweise GB.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if model.dockerInstalled {
@@ -207,8 +207,8 @@ struct DockerCleanupView: View {
                 pruneButton(reclaimable: u.totalReclaimable)
                 if let last = model.lastReclaimed {
                     Text("Letzter Lauf: \(last.humanBytes) reclaimed")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.success)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.success)
                 }
                 Spacer()
             }
@@ -221,30 +221,30 @@ struct DockerCleanupView: View {
     private func statTile(_ label: String, _ s: DockerUsage.Stat, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(label)
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Spacer()
                 Text("\(s.active) aktiv / \(s.total)")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             HStack {
                 Text(s.sizeBytes.humanBytes)
-                    .font(MD3.Typo.tabular(MD3.Typo.title3))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.tabular(MD4.Typo.title3))
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Spacer()
                 if s.reclaimableBytes > 0 {
                     Text("\(s.reclaimableBytes.humanBytes) reclaimable")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.warning)
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -255,11 +255,11 @@ struct DockerCleanupView: View {
             HStack {
                 Image(systemName: "trash")
                 Text("System Prune — \(reclaimable.humanBytes) frei")
-                    .font(MD3.Typo.headline)
+                    .font(MD4.Typo.headline)
             }
             .padding(.horizontal, 24).padding(.vertical, 12)
             .foregroundStyle(.white)
-            .background(MD3.SemColor.brandPrimary,
+            .background(MD4.SemColor.brandPrimary,
                         in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)

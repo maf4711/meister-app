@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct AppSignature: Identifiable, Hashable {
     let id: String          // bundle path
@@ -146,12 +146,12 @@ struct CodeSignatureView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             controls
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.apps.isEmpty { await model.reload() } }
     }
 
@@ -159,11 +159,11 @@ struct CodeSignatureView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Code Signature")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("codesign --verify für alle Apps in /Applications. Unsigned oder invalid zuerst.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -187,12 +187,12 @@ struct CodeSignatureView: View {
             let issues = model.apps.filter { if case .valid = $0.status { return false }; return true }.count
             if issues > 0 {
                 Text("\(issues) App\(issues == 1 ? "" : "s") mit Problemen")
-                    .font(MD3.Typo.caption.bold())
-                    .foregroundStyle(MD3.SemColor.warning)
+                    .font(MD4.Typo.caption.bold())
+                    .foregroundStyle(MD4.SemColor.warning)
             } else if !model.apps.isEmpty {
                 Text("Alle \(model.apps.count) Apps gültig")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.success)
             }
         }
         .padding(.horizontal, 20).padding(.vertical, 10)
@@ -210,12 +210,12 @@ struct CodeSignatureView: View {
                             .resizable().frame(width: 28, height: 28)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(app.name)
-                                .font(MD3.Typo.body)
-                                .foregroundStyle(MD3.SemColor.textPrimary)
+                                .font(MD4.Typo.body)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
                             if let authority = app.authority {
                                 Text(authority)
-                                    .font(MD3.Typo.caption)
-                                    .foregroundStyle(MD3.SemColor.textSecondary)
+                                    .font(MD4.Typo.caption)
+                                    .foregroundStyle(MD4.SemColor.textSecondary)
                                     .lineLimit(1)
                             }
                         }
@@ -233,17 +233,17 @@ struct CodeSignatureView: View {
     private func statusBadge(_ s: AppSignature.SignStatus) -> some View {
         let (label, color, icon): (String, Color, String) = {
             switch s {
-            case .valid:    return ("Gültig", MD3.SemColor.success, "checkmark.seal.fill")
-            case .unsigned: return ("Unsigniert", MD3.SemColor.warning, "exclamationmark.triangle.fill")
-            case .invalid(let m): return ("Ungültig", MD3.SemColor.error, "xmark.seal.fill")
-            case .error:    return ("Fehler", MD3.SemColor.textTertiary, "questionmark.circle")
+            case .valid:    return ("Gültig", MD4.SemColor.success, "checkmark.seal.fill")
+            case .unsigned: return ("Unsigniert", MD4.SemColor.warning, "exclamationmark.triangle.fill")
+            case .invalid(let m): return ("Ungültig", MD4.SemColor.error, "xmark.seal.fill")
+            case .error:    return ("Fehler", MD4.SemColor.textTertiary, "questionmark.circle")
             }
         }()
         return HStack(spacing: 4) {
             Image(systemName: icon)
             Text(label)
         }
-        .font(MD3.Typo.caption.bold())
+        .font(MD4.Typo.caption.bold())
         .padding(.horizontal, 6).padding(.vertical, 2)
         .background(color.opacity(0.18), in: Capsule())
         .foregroundStyle(color)

@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct EnergyHog: Identifiable, Hashable {
     let id: Int       // pid
@@ -79,10 +79,10 @@ struct EnergyImpactView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .onAppear { model.start() }
         .onDisappear { model.stop() }
     }
@@ -91,11 +91,11 @@ struct EnergyImpactView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Energy Impact")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Welche Prozesse fressen grade Akku/CPU. Live, alle 5 Sekunden.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if model.isLoading {
@@ -109,19 +109,19 @@ struct EnergyImpactView: View {
         List(model.hogs) { h in
             HStack {
                 Text(h.name)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                     .lineLimit(1)
                 Spacer()
                 bar(value: min(h.energyImpact / 100, 1))
                     .frame(width: 80, height: 6)
                 Text(String(format: "%.0f", h.energyImpact))
-                    .font(MD3.Typo.tabular(MD3.Typo.caption))
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.tabular(MD4.Typo.caption))
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .frame(width: 36, alignment: .trailing)
                 Text(String(format: "%.0f%%", h.cpuPercent))
-                    .font(MD3.Typo.tabular(MD3.Typo.caption))
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.tabular(MD4.Typo.caption))
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .frame(width: 50, alignment: .trailing)
             }
             .padding(.vertical, 2)
@@ -132,7 +132,7 @@ struct EnergyImpactView: View {
 
     private func bar(value: Double) -> some View {
         ZStack(alignment: .leading) {
-            Capsule().fill(MD3.SemColor.surfaceRaised)
+            Capsule().fill(MD4.SemColor.surfaceRaised)
             Capsule().fill(barColor(value))
                 .scaleEffect(x: CGFloat(max(0.02, value)), y: 1, anchor: .leading)
         }
@@ -140,9 +140,9 @@ struct EnergyImpactView: View {
 
     private func barColor(_ v: Double) -> Color {
         switch v {
-        case 0..<0.33: return MD3.SemColor.success
-        case 0.33..<0.66: return MD3.SemColor.warning
-        default: return MD3.SemColor.error
+        case 0..<0.33: return MD4.SemColor.success
+        case 0.33..<0.66: return MD4.SemColor.warning
+        default: return MD4.SemColor.error
         }
     }
 }

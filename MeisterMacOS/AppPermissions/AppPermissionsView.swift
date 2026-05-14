@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct AppPermission: Identifiable, Hashable {
     let id: String
@@ -143,10 +143,10 @@ struct AppPermissionsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { await model.reload() }
     }
 
@@ -154,11 +154,11 @@ struct AppPermissionsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("App Permissions")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("TCC.db Audit — wer hat Camera/Mic/FDA. Braucht Full Disk Access für Meister.app.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -190,13 +190,13 @@ struct AppPermissionsView: View {
         VStack(spacing: 14) {
             Image(systemName: "lock.shield.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(MD3.SemColor.warning)
+                .foregroundStyle(MD4.SemColor.warning)
             Text("Full Disk Access erforderlich")
-                .font(MD3.Typo.title3)
-                .foregroundStyle(MD3.SemColor.textPrimary)
+                .font(MD4.Typo.title3)
+                .foregroundStyle(MD4.SemColor.textPrimary)
             Text("TCC.db ist SIP-geschützt. Meister.app in System Settings → Privacy & Security → Full Disk Access freischalten, dann Reload.")
-                .font(MD3.Typo.body)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.body)
+                .foregroundStyle(MD4.SemColor.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 460)
             Button("System Settings öffnen") {
@@ -210,27 +210,27 @@ struct AppPermissionsView: View {
     private func serviceSection(_ svc: TCCService, _ items: [AppPermission]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: svc.icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: svc.icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(svc.label)
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Spacer()
                 Text("\(items.count)")
-                    .font(MD3.Typo.caption.bold())
+                    .font(MD4.Typo.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(MD3.SemColor.surfaceRaised, in: Capsule())
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .background(MD4.SemColor.surfaceRaised, in: Capsule())
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             ForEach(items) { p in
                 HStack {
                     Image(systemName: p.allowed ? "checkmark.circle.fill" : "minus.circle")
-                        .foregroundStyle(p.allowed ? MD3.SemColor.success : MD3.SemColor.textTertiary)
+                        .foregroundStyle(p.allowed ? MD4.SemColor.success : MD4.SemColor.textTertiary)
                     Text(p.displayName ?? p.bundleID)
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Text(p.bundleID)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(1).truncationMode(.middle)
                     Spacer()
                 }
@@ -239,7 +239,7 @@ struct AppPermissionsView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

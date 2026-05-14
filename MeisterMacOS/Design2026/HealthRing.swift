@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Apple Design 2026 — animated health ring.
 /// Static state: gradient arc filled to `progress`, color reflects health bucket.
@@ -16,9 +16,9 @@ struct HealthRing: View {
 
     private var color: Color {
         switch progress {
-        case 0.8...1.0: return MD3.SemColor.success
-        case 0.5..<0.8: return MD3.SemColor.warning
-        default:        return MD3.SemColor.error
+        case 0.8...1.0: return MD4.SemColor.success
+        case 0.5..<0.8: return MD4.SemColor.warning
+        default:        return MD4.SemColor.error
         }
     }
 
@@ -34,7 +34,7 @@ struct HealthRing: View {
         ZStack {
             // Track
             Circle()
-                .stroke(MD3.SemColor.surfaceRaised, lineWidth: lineWidth)
+                .stroke(MD4.SemColor.surfaceRaised, lineWidth: lineWidth)
                 .frame(width: size, height: size)
 
             // Progress arc with conic gradient
@@ -60,9 +60,9 @@ struct HealthRing: View {
                         AngularGradient(
                             gradient: Gradient(stops: [
                                 .init(color: .clear,                                       location: 0.0),
-                                .init(color: MD3.SemColor.brandPrimary.opacity(0.65),      location: 0.20),
-                                .init(color: MD3.SemColor.brandStrong.opacity(0.85),       location: 0.40),
-                                .init(color: MD3.SemColor.brandPrimary.opacity(0.65),      location: 0.55),
+                                .init(color: MD4.SemColor.brandPrimary.opacity(0.65),      location: 0.20),
+                                .init(color: MD4.SemColor.brandStrong.opacity(0.85),       location: 0.40),
+                                .init(color: MD4.SemColor.brandPrimary.opacity(0.65),      location: 0.55),
                                 .init(color: .clear,                                       location: 0.80),
                             ]),
                             center: .center,

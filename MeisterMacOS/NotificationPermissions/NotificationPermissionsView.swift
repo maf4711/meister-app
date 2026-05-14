@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct NotifAppPerm: Identifiable, Hashable {
     let id: String
@@ -109,10 +109,10 @@ struct NotificationPermissionsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.entries.isEmpty { await model.reload() } }
     }
 
@@ -120,11 +120,11 @@ struct NotificationPermissionsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Notification Permissions")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Welche Apps dürfen wann Notifications schicken. \(model.entries.count) Apps registriert, \(model.totalAllowed) erlaubt.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button("In Systemeinstellungen öffnen") {
@@ -156,15 +156,15 @@ struct NotificationPermissionsView: View {
                     } else {
                         Image(systemName: "app.dashed")
                             .frame(width: 26)
-                            .foregroundStyle(MD3.SemColor.textTertiary)
+                            .foregroundStyle(MD4.SemColor.textTertiary)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(e.displayName)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text(e.bundleID)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                             .lineLimit(1).truncationMode(.middle)
                     }
                     Spacer()
@@ -185,10 +185,10 @@ struct NotificationPermissionsView: View {
 
     private func flag(_ label: String, _ on: Bool) -> some View {
         Text(label)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 6).padding(.vertical, 2)
-            .background((on ? MD3.SemColor.brandPrimary : MD3.SemColor.surfaceRaised).opacity(on ? 0.2 : 1),
+            .background((on ? MD4.SemColor.brandPrimary : MD4.SemColor.surfaceRaised).opacity(on ? 0.2 : 1),
                         in: Capsule())
-            .foregroundStyle(on ? MD3.SemColor.brandPrimary : MD3.SemColor.textTertiary)
+            .foregroundStyle(on ? MD4.SemColor.brandPrimary : MD4.SemColor.textTertiary)
     }
 }

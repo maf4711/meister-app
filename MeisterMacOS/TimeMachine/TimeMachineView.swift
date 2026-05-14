@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class TimeMachineModel: ObservableObject {
@@ -32,12 +32,12 @@ struct TimeMachineView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             statusCard
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             snapshotList
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.status == nil { await model.reload() } }
         .alert("Fehler",
                isPresented: Binding(get: { model.errorMessage != nil },
@@ -50,11 +50,11 @@ struct TimeMachineView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Time Machine & Snapshots")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Backup-Status + lokale APFS-Snapshots verwalten.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -71,25 +71,25 @@ struct TimeMachineView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: s.isRunning ? "arrow.clockwise.icloud.fill" : "externaldrive.fill")
-                        .foregroundStyle(s.isRunning ? MD3.SemColor.brandPrimary : MD3.SemColor.textSecondary)
+                        .foregroundStyle(s.isRunning ? MD4.SemColor.brandPrimary : MD4.SemColor.textSecondary)
                     Text(s.isRunning ? "Backup läuft gerade" : "Backup nicht aktiv")
-                        .font(MD3.Typo.headline)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.headline)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Spacer()
                 }
                 if let last = s.lastBackupDate {
                     Text("Letztes Backup: \(last.formatted(date: .abbreviated, time: .shortened))")
-                        .font(MD3.Typo.small)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.small)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 } else {
                     Text("Letztes Backup: unbekannt")
-                        .font(MD3.Typo.small)
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .font(MD4.Typo.small)
+                        .foregroundStyle(MD4.SemColor.warning)
                 }
                 if let dest = s.destination {
                     Text("Ziel: \(dest)")
-                        .font(MD3.Typo.small)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.small)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
             }
             .padding(20)
@@ -101,11 +101,11 @@ struct TimeMachineView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Lokale Snapshots (\(model.snapshots.count))")
-                    .font(MD3.Typo.headline)
+                    .font(MD4.Typo.headline)
                 Spacer()
                 Text("APFS, auf der internen SSD")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -115,11 +115,11 @@ struct TimeMachineView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(snap.creationDate?.formatted(date: .abbreviated, time: .shortened) ?? snap.name)
-                                .font(MD3.Typo.body)
-                                .foregroundStyle(MD3.SemColor.textPrimary)
+                                .font(MD4.Typo.body)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
                             Text(snap.name)
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                                 .lineLimit(1)
                         }
                         Spacer()

@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Apple Design 2026 — the new top-of-app Dashboard.
 /// Bento grid: Health Ring (2-tile span), reclaimable storage (1×1),
@@ -32,10 +32,10 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Meister")
                     .font(.system(size: 36, weight: .light))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(greeting)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -84,12 +84,12 @@ struct DashboardView: View {
     // MARK: tiles
 
     private var healthRingTile: some View {
-        AuroraCard(radius: MD3.Radii.lg, padding: 24, aurora: model.isLoading) {
+        AuroraCard(radius: MD4.Radii.lg, padding: 24, aurora: model.isLoading) {
             VStack(spacing: 12) {
                 HStack {
                     Text("Health Score")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .textCase(.uppercase)
                     Spacer()
                 }
@@ -101,15 +101,15 @@ struct DashboardView: View {
                         VStack(spacing: 0) {
                             NumberFlow(model.snapshot?.score ?? 0,
                                        font: .system(size: 56, weight: .light, design: .default))
-                                .foregroundStyle(MD3.SemColor.textPrimary)
+                                .foregroundStyle(MD4.SemColor.textPrimary)
                             Text("/ 100")
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                         }
                     }
                 if let snap = model.snapshot {
                     Text(verdict(snap.score))
-                        .font(MD3.Typo.small)
+                        .font(MD4.Typo.small)
                         .foregroundStyle(verdictColor(snap.score))
                         .padding(.top, 4)
                 }
@@ -118,14 +118,14 @@ struct DashboardView: View {
     }
 
     private var reclaimableTile: some View {
-        AuroraCard(radius: MD3.Radii.lg, padding: 20) {
+        AuroraCard(radius: MD4.Radii.lg, padding: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: "sparkles")
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                     Text("Reclaimable")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .textCase(.uppercase)
                     Spacer()
                 }
@@ -133,86 +133,86 @@ struct DashboardView: View {
                            suffix: " GB",
                            decimals: 1,
                            font: .system(size: 42, weight: .light))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("System Cleanup, Caches, Logs, Trash")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
         }
     }
 
     private var securityTile: some View {
-        AuroraCard(radius: MD3.Radii.lg, padding: 20) {
+        AuroraCard(radius: MD4.Radii.lg, padding: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: model.allSecurityOK
                           ? "checkmark.shield.fill"
                           : "exclamationmark.shield.fill")
                         .foregroundStyle(model.allSecurityOK
-                                         ? MD3.SemColor.success
-                                         : MD3.SemColor.warning)
+                                         ? MD4.SemColor.success
+                                         : MD4.SemColor.warning)
                     Text("Security")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .textCase(.uppercase)
                     Spacer()
                 }
                 Text(model.allSecurityOK ? "Alles aktiv" : "\(model.securityIssueCount) Hinweis\(model.securityIssueCount == 1 ? "" : "e")")
-                    .font(MD3.Typo.title3)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title3)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("FileVault · Firewall · Gatekeeper · SIP")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
         }
     }
 
     private var snapshotsTile: some View {
-        AuroraCard(radius: MD3.Radii.lg, padding: 20) {
+        AuroraCard(radius: MD4.Radii.lg, padding: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: "clock.arrow.circlepath")
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                     Text("Backup")
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .textCase(.uppercase)
                     Spacer()
                 }
                 if let last = model.lastBackup {
                     Text(last.formatted(.relative(presentation: .named)))
-                        .font(MD3.Typo.title3)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.title3)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                 } else {
                     Text("kein Backup")
-                        .font(MD3.Typo.title3)
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .font(MD4.Typo.title3)
+                        .foregroundStyle(MD4.SemColor.warning)
                 }
                 Text("\(model.snapshotCount) APFS-Snapshots")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
         }
     }
 
     private var aiRecommendationTile: some View {
-        AuroraCard(radius: MD3.Radii.lg, padding: 24, aurora: true) {
+        AuroraCard(radius: MD4.Radii.lg, padding: 24, aurora: true) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "wand.and.stars")
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                     Text("Smart Recommendation")
-                        .font(MD3.Typo.caption.bold())
-                        .foregroundStyle(MD3.SemColor.brandPrimary)
+                        .font(MD4.Typo.caption.bold())
+                        .foregroundStyle(MD4.SemColor.brandPrimary)
                         .textCase(.uppercase)
                     Spacer()
                 }
                 Text(model.recommendation)
-                    .font(MD3.Typo.title3)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title3)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(model.recommendationDetail)
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
         }
     }
@@ -228,9 +228,9 @@ struct DashboardView: View {
 
     private func verdictColor(_ score: Int) -> Color {
         switch score {
-        case 80...:   return MD3.SemColor.success
-        case 50..<80: return MD3.SemColor.warning
-        default:      return MD3.SemColor.error
+        case 80...:   return MD4.SemColor.success
+        case 50..<80: return MD4.SemColor.warning
+        default:      return MD4.SemColor.error
         }
     }
 }

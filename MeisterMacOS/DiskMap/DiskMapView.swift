@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct DiskNode: Identifiable, Hashable {
     let id: String           // path
@@ -147,12 +147,12 @@ struct DiskMapView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             breadcrumbs
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.root == nil { await model.scan() } }
     }
 
@@ -160,11 +160,11 @@ struct DiskMapView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Disk Map")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Treemap-Drilldown durch dein Home-Verzeichnis. Click → eine Ebene tiefer.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.scan() } } label: {
@@ -185,7 +185,7 @@ struct DiskMapView: View {
             .buttonStyle(.borderless)
             ForEach(model.path) { node in
                 Image(systemName: "chevron.right")
-                    .foregroundStyle(MD3.SemColor.textTertiary)
+                    .foregroundStyle(MD4.SemColor.textTertiary)
                     .font(.caption)
                 Button(node.name) {
                     if let i = model.path.firstIndex(of: node) {
@@ -197,8 +197,8 @@ struct DiskMapView: View {
             Spacer()
             if let cur = model.current {
                 Text(cur.bytes.humanBytes)
-                    .font(MD3.Typo.tabular(MD3.Typo.caption))
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.tabular(MD4.Typo.caption))
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
         }
         .padding(.horizontal, 20).padding(.vertical, 10)
@@ -246,12 +246,12 @@ struct DiskMapView: View {
                             Image(systemName: node.isDirectory ? "folder" : "doc")
                                 .font(.caption)
                             Text(node.name)
-                                .font(MD3.Typo.caption.bold())
+                                .font(MD4.Typo.caption.bold())
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
                         Text(node.bytes.humanBytes)
-                            .font(MD3.Typo.caption)
+                            .font(MD4.Typo.caption)
                             .opacity(0.85)
                     }
                     .foregroundStyle(.white)

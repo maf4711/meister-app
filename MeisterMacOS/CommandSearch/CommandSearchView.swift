@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// Spotlight-style fuzzy search over all BashModules. Triggered by Cmd-K.
 struct CommandSearchView: View {
@@ -28,22 +28,22 @@ struct CommandSearchView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 TextField("Modul suchen…", text: $query)
                     .textFieldStyle(.plain)
-                    .font(MD3.Typo.title3)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title3)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                     .focused($focused)
                     .onSubmit { commit() }
                 Text("⌘K")
-                    .font(MD3.Typo.caption)
+                    .font(MD4.Typo.caption)
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(MD3.SemColor.surfaceRaised, in: Capsule())
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .background(MD4.SemColor.surfaceRaised, in: Capsule())
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
 
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
 
             ScrollViewReader { proxy in
                 List {
@@ -65,10 +65,10 @@ struct CommandSearchView: View {
         }
         .frame(width: 560)
         .background(.thinMaterial)
-        .squircle(MD3.Radii.lg)
+        .squircle(MD4.Radii.lg)
         .overlay(
-            ContinuousSquircle(cornerRadius: MD3.Radii.lg)
-                .stroke(MD3.SemColor.divider, lineWidth: 0.5)
+            ContinuousSquircle(cornerRadius: MD4.Radii.lg)
+                .stroke(MD4.SemColor.divider, lineWidth: 0.5)
         )
         .onKeyPress(.upArrow) { highlight = max(0, highlight - 1); return .handled }
         .onKeyPress(.downArrow) { highlight = min(results.count - 1, highlight + 1); return .handled }
@@ -81,23 +81,23 @@ struct CommandSearchView: View {
         HStack(spacing: 12) {
             Image(systemName: module.symbol)
                 .frame(width: 24)
-                .foregroundStyle(isHighlighted ? MD3.SemColor.brandPrimary : MD3.SemColor.textSecondary)
+                .foregroundStyle(isHighlighted ? MD4.SemColor.brandPrimary : MD4.SemColor.textSecondary)
             VStack(alignment: .leading, spacing: 1) {
                 Text(module.title)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text(module.group.rawValue)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if isHighlighted {
                 Text("↵")
-                    .foregroundStyle(MD3.SemColor.textTertiary)
+                    .foregroundStyle(MD4.SemColor.textTertiary)
             }
         }
         .padding(.horizontal, 8).padding(.vertical, 8)
-        .background(isHighlighted ? MD3.SemColor.surfaceRaised : Color.clear,
+        .background(isHighlighted ? MD4.SemColor.surfaceRaised : Color.clear,
                     in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 

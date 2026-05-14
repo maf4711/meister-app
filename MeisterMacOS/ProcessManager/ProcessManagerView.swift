@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct ProcessRow: Identifiable, Hashable {
     let id: Int             // pid
@@ -142,12 +142,12 @@ struct ProcessManagerView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             controls
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .onAppear { model.startAutoRefresh() }
         .onDisappear { model.stopAutoRefresh() }
     }
@@ -156,17 +156,17 @@ struct ProcessManagerView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Process Manager")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("ps -ax + Live-Refresh alle 3 Sekunden. Kill via SIGTERM (default) oder SIGKILL (force).")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if let status = model.actionStatus {
                 Text(status)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(status.contains("failed") ? MD3.SemColor.error : MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(status.contains("failed") ? MD4.SemColor.error : MD4.SemColor.success)
             }
         }
         .padding(20)
@@ -176,12 +176,12 @@ struct ProcessManagerView: View {
         HStack(spacing: 8) {
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                 TextField("Filter…", text: $model.query)
                     .textFieldStyle(.plain)
             }
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(MD3.SemColor.surfaceRaised, in: Capsule())
+            .background(MD4.SemColor.surfaceRaised, in: Capsule())
             Picker("Sort", selection: $model.sort) {
                 ForEach(ProcessManagerModel.Sort.allCases) { s in
                     Text(s.label).tag(s)
@@ -191,8 +191,8 @@ struct ProcessManagerView: View {
             .frame(width: 240)
             Spacer()
             Text("\(model.filtered.count) Prozesse")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.horizontal, 20).padding(.vertical, 10)
     }
@@ -201,26 +201,26 @@ struct ProcessManagerView: View {
         List(model.filtered) { p in
             HStack(spacing: 8) {
                 Text("\(p.id)")
-                    .font(MD3.Typo.tabular(MD3.Typo.caption))
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.tabular(MD4.Typo.caption))
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .frame(width: 60, alignment: .leading)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(p.name)
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                         .lineLimit(1)
                     Text(p.command)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
                 Spacer()
-                metric(String(format: "%.1f%%", p.cpuPercent), MD3.SemColor.warning, width: 60)
-                metric(p.rssBytes.humanBytes, MD3.SemColor.brandPrimary, width: 80)
+                metric(String(format: "%.1f%%", p.cpuPercent), MD4.SemColor.warning, width: 60)
+                metric(p.rssBytes.humanBytes, MD4.SemColor.brandPrimary, width: 80)
                 Text(p.user)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .frame(width: 80, alignment: .leading)
             }
             .swipeActions(edge: .trailing) {
@@ -230,7 +230,7 @@ struct ProcessManagerView: View {
                 Button {
                     Task { await model.kill(pid: p.id, force: false) }
                 } label: { Label("Quit", systemImage: "stop.circle") }
-                .tint(MD3.SemColor.warning)
+                .tint(MD4.SemColor.warning)
             }
         }
         .listStyle(.inset)
@@ -239,7 +239,7 @@ struct ProcessManagerView: View {
 
     private func metric(_ text: String, _ color: Color, width: CGFloat) -> some View {
         Text(text)
-            .font(MD3.Typo.tabular(MD3.Typo.caption))
+            .font(MD4.Typo.tabular(MD4.Typo.caption))
             .foregroundStyle(color)
             .frame(width: width, alignment: .trailing)
     }

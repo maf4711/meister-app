@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct SystemUpdate: Identifiable, Hashable {
     let id: String
@@ -117,10 +117,10 @@ struct SystemUpdatesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.updates.isEmpty { await model.reload() } }
     }
 
@@ -128,11 +128,11 @@ struct SystemUpdatesView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("System Updates")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("softwareupdate --list. Install-Kommandos brauchen sudo — werden in die Zwischenablage kopiert.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button("System-Settings öffnen") {
@@ -159,27 +159,27 @@ struct SystemUpdatesView: View {
             List(model.updates) { u in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Image(systemName: "arrow.down.app").foregroundStyle(MD3.SemColor.brandPrimary)
+                        Image(systemName: "arrow.down.app").foregroundStyle(MD4.SemColor.brandPrimary)
                         Text(u.title)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Spacer()
                         if u.isRecommended {
-                            badge("Empfohlen", MD3.SemColor.success)
+                            badge("Empfohlen", MD4.SemColor.success)
                         }
                         if u.requiresRestart {
-                            badge("Neustart", MD3.SemColor.warning)
+                            badge("Neustart", MD4.SemColor.warning)
                         }
                     }
                     HStack {
                         Text(u.label)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                             .textSelection(.enabled)
                         if let bytes = u.sizeBytes {
                             Text("· \(bytes.humanBytes)")
-                                .font(MD3.Typo.caption)
-                                .foregroundStyle(MD3.SemColor.textSecondary)
+                                .font(MD4.Typo.caption)
+                                .foregroundStyle(MD4.SemColor.textSecondary)
                         }
                         Spacer()
                         Button {
@@ -203,7 +203,7 @@ struct SystemUpdatesView: View {
 
     private func badge(_ text: String, _ color: Color) -> some View {
         Text(text)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)

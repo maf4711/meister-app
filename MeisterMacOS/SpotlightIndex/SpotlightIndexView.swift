@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// One row of `mdutil -as` output. The CLI prints one line per volume:
 ///   /System/Volumes/Data:
@@ -20,11 +20,11 @@ struct SpotlightVolume: Identifiable, Hashable {
 
         var color: Color {
             switch self {
-            case .enabled:   return MD3.SemColor.success
-            case .disabled:  return MD3.SemColor.warning
-            case .noIndex:   return MD3.SemColor.warning
-            case .error:     return MD3.SemColor.error
-            case .unknown:   return MD3.SemColor.textTertiary
+            case .enabled:   return MD4.SemColor.success
+            case .disabled:  return MD4.SemColor.warning
+            case .noIndex:   return MD4.SemColor.warning
+            case .error:     return MD4.SemColor.error
+            case .unknown:   return MD4.SemColor.textTertiary
             }
         }
 
@@ -126,10 +126,10 @@ struct SpotlightIndexView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.volumes.isEmpty { await model.reload() } }
     }
 
@@ -137,17 +137,17 @@ struct SpotlightIndexView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Spotlight Index Audit")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("mdutil -as. Rebuild- und Enable-Kommandos werden in die Zwischenablage kopiert (brauchen sudo).")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if !model.problemVolumes.isEmpty {
-                badge("\(model.problemVolumes.count) Auffälligkeiten", MD3.SemColor.warning)
+                badge("\(model.problemVolumes.count) Auffälligkeiten", MD4.SemColor.warning)
             } else if !model.volumes.isEmpty {
-                badge("\(model.volumes.count) Volumes OK", MD3.SemColor.success)
+                badge("\(model.volumes.count) Volumes OK", MD4.SemColor.success)
             }
             Button { Task { await model.reload() } } label: {
                 Label("Reload", systemImage: "arrow.clockwise")
@@ -181,20 +181,20 @@ struct SpotlightIndexView: View {
             HStack {
                 Image(systemName: v.status.icon).foregroundStyle(v.status.color)
                 Text(v.path)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                     .textSelection(.enabled)
                 Spacer()
                 Text(v.status.rawValue)
-                    .font(MD3.Typo.caption.bold())
+                    .font(MD4.Typo.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(v.status.color.opacity(0.18), in: Capsule())
                     .foregroundStyle(v.status.color)
             }
             HStack(spacing: 12) {
                 Text(v.raw)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
                     .lineLimit(1)
                 Spacer()
                 if v.status == .disabled {
@@ -231,7 +231,7 @@ struct SpotlightIndexView: View {
 
     private func badge(_ text: String, _ color: Color) -> some View {
         Text(text)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)

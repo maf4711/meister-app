@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 /// iOS-side hardware inventory. Limited to what UIDevice + ProcessInfo
 /// expose; no system_profiler equivalent on iOS.
@@ -12,7 +12,7 @@ struct IOSHardwareView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Hardware Inventory")
                     .font(.system(size: 28, weight: .light))
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 if let s = model.snapshot {
                     section("Device", icon: s.runtimeKind.icon,
                             rows: [
@@ -55,7 +55,7 @@ struct IOSHardwareView: View {
             }
             .padding(20)
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.snapshot == nil { await model.reload() } }
         .refreshable { await model.reload() }
     }
@@ -63,28 +63,28 @@ struct IOSHardwareView: View {
     private func section(_ title: String, icon: String, rows: [(String, String)]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: icon).foregroundStyle(MD3.SemColor.brandPrimary)
+                Image(systemName: icon).foregroundStyle(MD4.SemColor.brandPrimary)
                 Text(title)
-                    .font(MD3.Typo.headline)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.headline)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Spacer()
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { _, pair in
                 HStack {
                     Text(pair.0)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .frame(width: 110, alignment: .leading)
                     Text(pair.1)
-                        .font(MD3.Typo.tabular(MD3.Typo.body))
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.tabular(MD4.Typo.body))
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Spacer()
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MD3.SemColor.surfaceRaised,
+        .background(MD4.SemColor.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 

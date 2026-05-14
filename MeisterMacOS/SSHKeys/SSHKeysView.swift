@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class SSHKeysModel: ObservableObject {
@@ -33,10 +33,10 @@ struct SSHKeysView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.keys.isEmpty { await model.reload() } }
     }
 
@@ -44,11 +44,11 @@ struct SSHKeysView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("SSH Keys")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("~/.ssh — Typ, Bit-Länge, Fingerprint, Passphrase-Status, Risk-Score.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -71,7 +71,7 @@ struct SSHKeysView: View {
         } else {
             VStack(spacing: 0) {
                 riskBadges
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 keysList
             }
         }
@@ -79,13 +79,13 @@ struct SSHKeysView: View {
 
     private var riskBadges: some View {
         HStack(spacing: 12) {
-            badge("\(model.riskCounts.high) High Risk", MD3.SemColor.error)
-            badge("\(model.riskCounts.medium) Medium", MD3.SemColor.warning)
-            badge("\(model.riskCounts.low) OK", MD3.SemColor.success)
+            badge("\(model.riskCounts.high) High Risk", MD4.SemColor.error)
+            badge("\(model.riskCounts.medium) Medium", MD4.SemColor.warning)
+            badge("\(model.riskCounts.low) OK", MD4.SemColor.success)
             Spacer()
             Text("\(model.keys.count) Keys gesamt")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -93,7 +93,7 @@ struct SSHKeysView: View {
 
     private func badge(_ text: String, _ color: Color) -> some View {
         Text(text)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)
@@ -105,32 +105,32 @@ struct SSHKeysView: View {
                 HStack {
                     riskDot(k.risk)
                     Text(k.publicPath.lastPathComponent)
-                        .font(MD3.Typo.body)
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .font(MD4.Typo.body)
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     Spacer()
                     Text(k.keyType)
-                        .font(MD3.Typo.caption.bold())
+                        .font(MD4.Typo.caption.bold())
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(MD3.SemColor.surfaceRaised, in: Capsule())
-                        .foregroundStyle(MD3.SemColor.textPrimary)
+                        .background(MD4.SemColor.surfaceRaised, in: Capsule())
+                        .foregroundStyle(MD4.SemColor.textPrimary)
                     if let b = k.bits {
                         Text("\(b) bit")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     passphraseTag(k.hasPassphrase)
                 }
                 if let fp = k.fingerprint {
                     Text(fp)
-                        .font(MD3.Typo.tabular(MD3.Typo.caption))
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.tabular(MD4.Typo.caption))
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
                 if let comment = k.comment, !comment.isEmpty {
                     Text(comment)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textTertiary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textTertiary)
                         .lineLimit(1)
                 }
             }
@@ -139,7 +139,7 @@ struct SSHKeysView: View {
                 Button {
                     NSWorkspace.shared.activateFileViewerSelecting([k.publicPath])
                 } label: { Label("Reveal", systemImage: "magnifyingglass") }
-                .tint(MD3.SemColor.brandPrimary)
+                .tint(MD4.SemColor.brandPrimary)
             }
         }
         .listStyle(.inset)
@@ -149,9 +149,9 @@ struct SSHKeysView: View {
     private func riskDot(_ r: SSHKey.Risk) -> some View {
         let color: Color = {
             switch r {
-            case .low: return MD3.SemColor.success
-            case .medium: return MD3.SemColor.warning
-            case .high: return MD3.SemColor.error
+            case .low: return MD4.SemColor.success
+            case .medium: return MD4.SemColor.warning
+            case .high: return MD4.SemColor.error
             }
         }()
         return Circle().fill(color).frame(width: 8, height: 8)
@@ -160,14 +160,14 @@ struct SSHKeysView: View {
     private func passphraseTag(_ s: SSHKey.KeyState) -> some View {
         let (label, color): (String, Color) = {
             switch s {
-            case .protected:    return ("passphrase", MD3.SemColor.success)
-            case .unprotected:  return ("ohne passphrase", MD3.SemColor.error)
-            case .noPrivate:    return ("nur public", MD3.SemColor.textTertiary)
-            case .unknown:      return ("?", MD3.SemColor.textTertiary)
+            case .protected:    return ("passphrase", MD4.SemColor.success)
+            case .unprotected:  return ("ohne passphrase", MD4.SemColor.error)
+            case .noPrivate:    return ("nur public", MD4.SemColor.textTertiary)
+            case .unknown:      return ("?", MD4.SemColor.textTertiary)
             }
         }()
         return Text(label)
-            .font(MD3.Typo.caption.bold())
+            .font(MD4.Typo.caption.bold())
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)

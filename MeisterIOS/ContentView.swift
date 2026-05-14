@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct ContentView: View {
     /// Selection so the Shortcuts intent can deeplink into the Quick-Clean tab.
@@ -34,7 +34,7 @@ struct ContentView: View {
                 .tabItem { Label("Diagnostics", systemImage: "waveform.path.ecg") }
                 .tag(Tab.diagnostics)
         }
-        .toolbarBackground(MD3.SemColor.surface, for: .tabBar)
+        .toolbarBackground(MD4.SemColor.surface, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .onChange(of: launcher.pendingAutoStart) { _, pending in
             // Shortcuts/Siri triggered Quick-Clean: jump to the right tab.

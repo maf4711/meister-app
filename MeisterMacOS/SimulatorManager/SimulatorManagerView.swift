@@ -1,5 +1,5 @@
 import SwiftUI
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct SimDevice: Identifiable, Hashable {
     let id: String        // UDID
@@ -117,10 +117,10 @@ struct SimulatorManagerView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.devices.isEmpty { await model.reload() } }
     }
 
@@ -128,17 +128,17 @@ struct SimulatorManagerView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Simulator Manager")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("xcrun simctl — pro Sim erase oder delete. Gesamt: \(model.totalDataBytes.humanBytes) Sim-Daten.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             if let status = model.actionStatus {
                 Text(status)
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.success)
                     .padding(.trailing, 12)
             }
             Button { Task { await model.reload() } } label: {
@@ -161,20 +161,20 @@ struct SimulatorManagerView: View {
             List(model.devices) { d in
                 HStack {
                     Image(systemName: d.state == "Booted" ? "iphone.gen2.circle.fill" : "iphone.gen2")
-                        .foregroundStyle(d.state == "Booted" ? MD3.SemColor.success : MD3.SemColor.textSecondary)
+                        .foregroundStyle(d.state == "Booted" ? MD4.SemColor.success : MD4.SemColor.textSecondary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(d.name)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("\(d.runtime) · \(d.state)")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Spacer()
                     if let size = d.dataSize {
                         Text(size.humanBytes)
-                            .font(MD3.Typo.tabular(MD3.Typo.caption))
-                            .foregroundStyle(MD3.SemColor.textSecondary)
+                            .font(MD4.Typo.tabular(MD4.Typo.caption))
+                            .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Button("Erase") { Task { await model.erase(d) } }
                         .buttonStyle(.borderless)

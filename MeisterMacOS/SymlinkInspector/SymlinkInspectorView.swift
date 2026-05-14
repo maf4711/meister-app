@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 struct BrokenSymlink: Identifiable, Hashable {
     let id: String
@@ -106,14 +106,14 @@ struct SymlinkInspectorView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             content
             if !model.broken.isEmpty {
-                Divider().background(MD3.SemColor.divider)
+                Divider().background(MD4.SemColor.divider)
                 footer
             }
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.broken.isEmpty { await model.scan() } }
     }
 
@@ -121,11 +121,11 @@ struct SymlinkInspectorView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Symlink Inspector")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Symlinks deren Ziel nicht mehr existiert. Recycle löscht den Link, nie das Ziel.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.scan() } } label: {
@@ -155,19 +155,19 @@ struct SymlinkInspectorView: View {
                     .toggleStyle(.checkbox)
                     .labelsHidden()
                     Image(systemName: "link.badge.exclamationmark")
-                        .foregroundStyle(MD3.SemColor.warning)
+                        .foregroundStyle(MD4.SemColor.warning)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(link.url.lastPathComponent)
-                            .font(MD3.Typo.body)
-                            .foregroundStyle(MD3.SemColor.textPrimary)
+                            .font(MD4.Typo.body)
+                            .foregroundStyle(MD4.SemColor.textPrimary)
                         Text("→ \(link.target)")
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.error)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.error)
                             .lineLimit(1)
                             .truncationMode(.middle)
                         Text(link.parent.path)
-                            .font(MD3.Typo.caption)
-                            .foregroundStyle(MD3.SemColor.textTertiary)
+                            .font(MD4.Typo.caption)
+                            .foregroundStyle(MD4.SemColor.textTertiary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
@@ -187,13 +187,13 @@ struct SymlinkInspectorView: View {
     private var footer: some View {
         HStack {
             Text("\(model.selected.count) ausgewählt")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
             Spacer()
             if let last = model.lastRecycled {
                 Text("Letzter Lauf: \(last) Links recycled")
-                    .font(MD3.Typo.caption)
-                    .foregroundStyle(MD3.SemColor.success)
+                    .font(MD4.Typo.caption)
+                    .foregroundStyle(MD4.SemColor.success)
                     .padding(.trailing, 12)
             }
             Button("In Papierkorb") {

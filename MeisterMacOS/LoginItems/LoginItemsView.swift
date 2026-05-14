@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import MeradOSDesign3
+import MeradOSDesign4
 
 @MainActor
 final class LoginItemsModel: ObservableObject {
@@ -28,12 +28,12 @@ struct LoginItemsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             kindFilter
-            Divider().background(MD3.SemColor.divider)
+            Divider().background(MD4.SemColor.divider)
             list
         }
-        .background(MD3.SemColor.background)
+        .background(MD4.SemColor.background)
         .task { if model.items.isEmpty { await model.reload() } }
     }
 
@@ -41,11 +41,11 @@ struct LoginItemsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Login Items & Launch Agents")
-                    .font(MD3.Typo.title2)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.title2)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 Text("Was startet bei Login + im Hintergrund. Read-only — Removal in Settings → Login Items.")
-                    .font(MD3.Typo.small)
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .font(MD4.Typo.small)
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
             Button { Task { await model.reload() } } label: {
@@ -65,8 +65,8 @@ struct LoginItemsView: View {
             chip("Daemons", .launchDaemon)
             Spacer()
             Text("\(model.filtered.count) Einträge")
-                .font(MD3.Typo.caption)
-                .foregroundStyle(MD3.SemColor.textSecondary)
+                .font(MD4.Typo.caption)
+                .foregroundStyle(MD4.SemColor.textSecondary)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -75,11 +75,11 @@ struct LoginItemsView: View {
     private func chip(_ label: String, _ kind: LoginItemKind?) -> some View {
         let active = model.filter == kind
         return Button(label) { model.filter = kind }
-            .font(MD3.Typo.caption)
+            .font(MD4.Typo.caption)
             .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(active ? MD3.SemColor.brandPrimary.opacity(0.2) : Color.clear,
+            .background(active ? MD4.SemColor.brandPrimary.opacity(0.2) : Color.clear,
                         in: Capsule())
-            .foregroundStyle(active ? MD3.SemColor.brandPrimary : MD3.SemColor.textSecondary)
+            .foregroundStyle(active ? MD4.SemColor.brandPrimary : MD4.SemColor.textSecondary)
             .buttonStyle(.plain)
     }
 
@@ -96,16 +96,16 @@ struct LoginItemsView: View {
     private func row(_ item: LoginItem) -> some View {
         HStack {
             Image(systemName: kindIcon(item.kind))
-                .foregroundStyle(item.enabled ? MD3.SemColor.brandPrimary : MD3.SemColor.textTertiary)
+                .foregroundStyle(item.enabled ? MD4.SemColor.brandPrimary : MD4.SemColor.textTertiary)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.label)
-                    .font(MD3.Typo.body)
-                    .foregroundStyle(MD3.SemColor.textPrimary)
+                    .font(MD4.Typo.body)
+                    .foregroundStyle(MD4.SemColor.textPrimary)
                 if let path = item.path {
                     Text(path)
-                        .font(MD3.Typo.caption)
-                        .foregroundStyle(MD3.SemColor.textSecondary)
+                        .font(MD4.Typo.caption)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -113,14 +113,14 @@ struct LoginItemsView: View {
             Spacer()
             if let team = item.teamID {
                 Text(team)
-                    .font(MD3.Typo.caption)
+                    .font(MD4.Typo.caption)
                     .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(MD3.SemColor.surfaceRaised, in: RoundedRectangle(cornerRadius: 4))
-                    .foregroundStyle(MD3.SemColor.textSecondary)
+                    .background(MD4.SemColor.surfaceRaised, in: RoundedRectangle(cornerRadius: 4))
+                    .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Text(item.enabled ? "an" : "aus")
-                .font(MD3.Typo.caption.bold())
-                .foregroundStyle(item.enabled ? MD3.SemColor.success : MD3.SemColor.textTertiary)
+                .font(MD4.Typo.caption.bold())
+                .foregroundStyle(item.enabled ? MD4.SemColor.success : MD4.SemColor.textTertiary)
             if let path = item.path {
                 Button {
                     NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
