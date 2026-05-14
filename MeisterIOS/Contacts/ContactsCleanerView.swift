@@ -299,10 +299,6 @@ struct ContactGroupDetailView: View {
     }
 }
 
-extension CNContact: Identifiable {
-    public var id: String { identifier }
-}
-
 /// SwiftUI wrapper around CNContactViewController. Read-only, no editing —
 /// the goal is just to inspect what's stored, especially when comparing
 /// duplicates side-by-side before a merge.

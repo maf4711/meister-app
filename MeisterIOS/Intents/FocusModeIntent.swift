@@ -8,7 +8,7 @@ struct CleaningFocusFilter: SetFocusFilterIntent {
     static var description: LocalizedStringResource = "Pauses Meister notifications while you clean."
 
     @Parameter(title: "Silence While Cleaning")
-    var silenceNotifications: Bool
+    var silenceNotifications: Bool?
 
     static var parameterSummary: some ParameterSummary {
         Summary("Silence notifications: \(\.$silenceNotifications)")
@@ -17,12 +17,12 @@ struct CleaningFocusFilter: SetFocusFilterIntent {
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(
             title: "Cleaning Focus",
-            subtitle: silenceNotifications ? "Silent" : "Audible"
+            subtitle: (silenceNotifications ?? true) ? "Silent" : "Audible"
         )
     }
 
     func perform() async throws -> some IntentResult {
-        UserDefaults.standard.set(silenceNotifications, forKey: "focusSilence")
+        UserDefaults.standard.set(silenceNotifications ?? true, forKey: "focusSilence")
         return .result()
     }
 }

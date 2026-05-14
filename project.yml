@@ -26,7 +26,7 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GENERATE_INFOPLIST_FILE: YES
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "33"
+    CURRENT_PROJECT_VERSION: "34"
 
 targets:
   # iPhone + iPad (adaptive SwiftUI) + Mac Catalyst
@@ -37,10 +37,15 @@ targets:
       - path: MeisterIOS
       # Cross-platform Design2026 components (skip Mac-only Dashboard).
       - path: MeisterMacOS/Design2026/ContinuousSquircle.swift
+        group: MeisterMacOS/Design2026
       - path: MeisterMacOS/Design2026/HealthRing.swift
+        group: MeisterMacOS/Design2026
       - path: MeisterMacOS/Design2026/NumberFlow.swift
+        group: MeisterMacOS/Design2026
       - path: MeisterMacOS/Design2026/SparkleBurst.swift
+        group: MeisterMacOS/Design2026
       - path: MeisterMacOS/Design2026/AuroraCard.swift
+        group: MeisterMacOS/Design2026
     info:
       path: MeisterIOS/Info.plist
       properties:
