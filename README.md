@@ -75,7 +75,7 @@ brew install meister
 brew install --cask merados/meister/meister-mac   # (once released)
 ```
 
-Or build locally:
+Or build locally (see the new "Build (local development)" section above for the required design-system guard first):
 
 ```bash
 brew install xcodegen
@@ -87,6 +87,8 @@ If the bash CLI is missing when the macOS app runs, the app shows an inline inst
 
 ### iOS + iPad
 
+See the "Build (local development)" section above for the required `./scripts/ensure-design-system.sh` guard (and `LOCAL_DESIGN_PATH` override if needed), then:
+
 ```bash
 brew install xcodegen
 xcodegen
@@ -94,6 +96,37 @@ open Meister.xcodeproj    # select MeisterIOS scheme, run on device/simulator
 ```
 
 The iOS target ships with `TARGETED_DEVICE_FAMILY: "1,2"` (iPhone + iPad) and Mac Catalyst enabled for optional Mac sideloading.
+
+## Build (local development)
+
+**All local Xcode builds have a hard prerequisite:**
+
+```bash
+./scripts/ensure-design-system.sh
+```
+
+This guard (see the script for details) verifies that the MeradOSDesign4 design system sibling exists at the location declared in `project.yml`. It produces a clear `FATAL` early instead of a confusing XcodeGen or SwiftPM error.
+
+### Current limitation (this track)
+`project.yml` hard-codes a relative local path (`../meradOS/merados-design4`). This works only in the exact canonical layout on a developer machine that has the sibling monorepo checkout next to `meister/`.
+
+Git worktrees, CI systems, and other contributors must use the environment variable override:
+
+```bash
+LOCAL_DESIGN_PATH=/absolute/path/to/merados-design4 ./scripts/ensure-design-system.sh
+```
+
+A later track will eliminate the hard sibling dependency (documented local SPM → remote package or vendored copy).
+
+### Running a local build
+After the guard succeeds:
+
+```bash
+brew install xcodegen
+xcodegen
+open Meister.xcodeproj
+# choose scheme (MeisterMacOS or MeisterIOS) and run
+```
 
 ## Repository layout
 
