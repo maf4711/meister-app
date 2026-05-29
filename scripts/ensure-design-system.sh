@@ -24,8 +24,12 @@ DESIGN_PATH="${LOCAL_DESIGN_PATH:-../meradOS/merados-design4}"
 if [ ! -d "$DESIGN_PATH" ]; then
   echo "FATAL: MeradOSDesign4 not found at $DESIGN_PATH"
   echo "This is currently a hard local sibling dependency declared in project.yml."
-  echo "See README.md (Install → local build instructions) for details and override."
+  echo "See README.md (Build (local development) section) for details and LOCAL_DESIGN_PATH override."
   exit 1
 fi
 
-echo "✓ MeradOSDesign4 present at $DESIGN_PATH"
+if [ -n "${LOCAL_DESIGN_PATH:-}" ]; then
+  echo "✓ MeradOSDesign4 present at $DESIGN_PATH (via \$LOCAL_DESIGN_PATH)"
+else
+  echo "✓ MeradOSDesign4 present at $DESIGN_PATH"
+fi
