@@ -151,3 +151,116 @@ struct BashModule: Identifiable, Hashable {
         }
     }
 }
+
+// MARK: - View Factory (Task 3.1 of remediation)
+// BashModule now carries its own destination view.
+// This lets MacRootView become a one-liner and kills the giant switch.
+extension BashModule {
+    @ViewBuilder
+    var destination: some View {
+        switch id {
+        case "dashboard":
+            DashboardView()
+        case "addressbook":
+            AddressBookCleanupView()
+        case "system-cleanup":
+            SystemCleanupView()
+        case "uninstaller":
+            UninstallerView()
+        case "large-old-files":
+            LargeFilesView()
+        case "duplicates":
+            DuplicatesView()
+        case "security-status":
+            SecurityStatusView()
+        case "browser-privacy":
+            BrowserPrivacyView()
+        case "login-items":
+            LoginItemsView()
+        case "hosts-file":
+            HostsView()
+        case "time-machine":
+            TimeMachineView()
+        case "health-score":
+            HealthScoreView()
+        case "energy-impact":
+            EnergyImpactView()
+        case "usb-devices":
+            USBDevicesView()
+        case "cleanup-history":
+            CleanupHistoryView()
+        case "hardware-inventory":
+            HardwareInventoryView()
+        case "default-apps":
+            DefaultAppsView()
+        case "keychain-audit":
+            KeychainAuditView()
+        case "ssh-keys":
+            SSHKeysView()
+        case "ssd-health":
+            SSDHealthView()
+        case "tag-manager":
+            TagManagerView()
+        case "undo-cleanup":
+            UndoCleanupView()
+        case "xcode-switcher":
+            XcodeSwitcherView()
+        case "simulator-manager":
+            SimulatorManagerView()
+        case "docker-cleanup":
+            DockerCleanupView()
+        case "brew-doctor":
+            BrewDoctorView()
+        case "rosetta-audit":
+            RosettaAuditView()
+        case "quick-clean":
+            QuickCleanView()
+        case "auto-clean-all":
+            AutoCleanAllView()
+        case "extended-attributes":
+            ExtendedAttributesView()
+        case "symlink-inspector":
+            SymlinkInspectorView()
+        case "vpn-status":
+            VPNStatusView()
+        case "memory-pressure":
+            MemoryPressureView()
+        case "bluetooth-devices":
+            BluetoothDevicesView()
+        case "autopilot":
+            AutopilotView()
+        case "notification-perms":
+            NotificationPermissionsView()
+        case "icloud-sync":
+            ICloudSyncView()
+        case "wifi-passwords":
+            WiFiPasswordsView()
+        case "hosts-blocklist":
+            HostsBlocklistView()
+        case "app-permissions":
+            AppPermissionsView()
+        case "storage-forecast":
+            StorageForecastView()
+        case "slack-webhook":
+            SlackWebhookView()
+        case "disk-map":
+            DiskMapView()
+        case "process-manager":
+            ProcessManagerView()
+        case "network-connections":
+            NetworkConnectionsView()
+        case "system-updates":
+            SystemUpdatesView()
+        case "code-signature":
+            CodeSignatureView()
+        case "dns-flush":
+            DNSFlushView()
+        case "spotlight-audit":
+            SpotlightIndexView()
+        case "crash-reports":
+            CrashReportsView()
+        default:
+            BashOutputView(module: self)
+        }
+    }
+}
