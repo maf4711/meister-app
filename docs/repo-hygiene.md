@@ -50,4 +50,26 @@ If the repo ever grows significantly *and* build binaries are discovered in deep
 
 ---
 
-*This document will be extended for fixtures/ policy (Task 5.2) and guard (Task 5.3) in subsequent commits.*
+## fixtures/ Decision (Task 5.2)
+
+**Decision: Option B — Keep in-repo with documentation.**
+
+Rationale (after investigation):
+
+- Total size: 22 MiB (dominated by two generated MP4s: `largevideo_0.mp4` ~8.8 MiB, `RPReplay_Final_20260419_031500.mp4` ~11 MiB). Remaining ~20 JPG/PNG files are small (<200 KiB each).
+- "Small" threshold for LFS or separate test-fixtures repo **not met** (22 MiB is material relative to the entire ~20 MiB pack).
+- All content is *generated* deterministically by `scripts/seed_photos.py` (fixed random.seed(42), ffmpeg testsrc, PIL). It can be regenerated on demand for iOS simulator seeding (`xcrun simctl addmedia`).
+- Moving to LFS would add operational complexity (LFS tracking, every dev/CI setup, pointer files) with little gain for regeneratable test data.
+- A separate fixtures repo would fragment the project and add clone/fetch steps for a tiny test set.
+- Per plan rule: "Do the move only if small."
+
+**Action taken:** No files moved. No LFS. Added `.gitattributes` containing a clear comment block documenting the decision and usage (see `.gitattributes`).
+
+Future: If fixtures grow substantially or the generator is removed, prefer deleting the large media + on-demand regeneration (in test/CI setup) over introducing LFS.
+
+## Related Files
+
+- `.gitignore`
+- `.gitattributes` (fixtures policy + decision comment)
+- `scripts/seed_photos.py` (the fixture generator — source of truth)
+- `README.md` (mentions fixtures/ for iOS test images)
