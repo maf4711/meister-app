@@ -13,6 +13,23 @@ options:
 packages:
   MeisterKit:
     path: Packages/MeisterKit
+  # MeradOSDesign4 — local sibling SPM (Track 2 remediation state)
+  #
+  # PROBLEM (P0): The path below is a hard relative reference to a checkout that
+  # must sit next to this repository in a specific monorepo layout:
+  #   ../meradOS/merados-design4
+  #
+  # This only works on developer machines with the exact sibling layout.
+  # It breaks for:
+  #   - git worktrees (including this track's worktree)
+  #   - CI / fresh clones / contributors without the sibling
+  #   - Any other directory structure
+  #
+  # Guard: scripts/ensure-design-system.sh (called out in README Build section)
+  #        provides an early, clear FATAL + LOCAL_DESIGN_PATH override.
+  #
+  # This track (2): only adds the guard + documentation. No behavior change.
+  # Future track: promote to real remote SPM (or vendor the package).
   MeradOSDesign4:
     path: ../meradOS/merados-design4
 
