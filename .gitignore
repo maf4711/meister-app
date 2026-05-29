@@ -18,7 +18,8 @@ __pycache__/
 *.pyc
 
 # Local agent/build/cache state
-.claude/
+# (Exception: .claude/ is tracked for committed commands/, hooks/, and status/ docs per project rules.
+#  Runtime/local agent state inside .claude/ should use subpath ignores if needed in future.)
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
