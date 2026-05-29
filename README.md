@@ -112,11 +112,12 @@ meister/
 ├── MeisterWidget/                 iOS widget extension
 ├── MeisterTests/                  iOS unit tests
 ├── Packages/
-│   └── MeisterKit/                local Swift package — shared engine
+│   └── MeisterKit/                local Swift package — shared native engine for iOS + macOS
 │       ├── Package.swift
-│       └── Sources/MeisterKit/
-│           ├── AddressBook/       scanner, cleanup, sync state, vCard export
-│           └── Bash/              MeisterBash shell-out wrapper
+│       ├── Sources/MeisterKit/
+│       │   ├── AddressBook/       CNContactStore scanner + cleanup (to Trash), vCard export, sync inspector
+│       │   └── Bash/              MeisterBash — thin wrapper to the brew `meister` CLI
+│       └── Tests/MeisterKitTests/  (Shell large-output handling, etc.)
 ├── docs/
 │   └── contacts-troubleshooting.md  incident report that drove the AddressBook module
 ├── fixtures/                      iOS test images
