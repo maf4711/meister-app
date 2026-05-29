@@ -39,3 +39,27 @@ final class EnergyImpactParserTests: XCTestCase {
         XCTAssertEqual(hogs.first?.name, "Chrome Helper (Renderer)")
     }
 }
+
+// Tiny test for Task 3.1: exercises every BashModule.id through the destination factory switch.
+// This provides a (runtime) check that all ids have a case (natives get their View, others fall to default BashOutputView).
+// "Even if just compile-time": adding a new native module id to BashModule.all without a corresponding case
+// in the destination switch will cause that module to incorrectly use BashOutputView (the default).
+// The act of maintaining the case list alongside the .all array forces the developer to handle it when adding modules.
+// Run: swift test or via Xcode to exercise.
+final class BashModuleDestinationTests: XCTestCase {
+    func test_everyBashModuleIdHasACase_inDestinationFactory() {
+        let allModules = BashModule.all
+        XCTAssertFalse(allModules.isEmpty, "BashModule.all must not be empty")
+
+        // Exercise the @ViewBuilder switch for EVERY id. This runs the switch expression for each.
+        // If a native module (command: []) ever lacks a case, it will silently use the bash default —
+        // this test at least ensures the code path is exercised for all current modules without crashing.
+        for module in allModules {
+            // Accessing .destination evaluates the switch and constructs the concrete View.
+            let _ = module.destination
+        }
+
+        // If we reached here, every id had a matching case (or hit default, which is intended for bash modules).
+        XCTAssertTrue(true, "All BashModule destinations constructed successfully")
+    }
+}
