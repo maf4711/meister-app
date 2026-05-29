@@ -67,9 +67,20 @@ Rationale (after investigation):
 
 Future: If fixtures grow substantially or the generator is removed, prefer deleting the large media + on-demand regeneration (in test/CI setup) over introducing LFS.
 
+## CI/Build Guard (Task 5.3 — Stretch)
+
+Minimal guard script: `scripts/verify-no-build-artifacts.sh`
+
+- Fails (exit 1) if any `.app`, `.ipa`, `*.dSYM`, `*.xcarchive` appear in the tree.
+- Zero dependencies, ~30 lines, POSIX-ish bash.
+- Run manually: `scripts/verify-no-build-artifacts.sh`
+- Intent: local safety net + ready for CI wiring. (Stretch — not wired into any workflow yet.)
+- Follows "minimal guard" preference: documentation first, tiny automation second.
+
 ## Related Files
 
 - `.gitignore`
 - `.gitattributes` (fixtures policy + decision comment)
 - `scripts/seed_photos.py` (the fixture generator — source of truth)
+- `scripts/verify-no-build-artifacts.sh` (this guard)
 - `README.md` (mentions fixtures/ for iOS test images)
