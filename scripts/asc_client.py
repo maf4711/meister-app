@@ -14,6 +14,7 @@ Environment variables (override the defaults below):
   ASC_ISSUER_ID     Team-wide Issuer ID
   ASC_KEY_PATH      Path to the .p8 file
 """
+
 from __future__ import annotations
 import argparse
 import datetime as dt
@@ -30,10 +31,12 @@ import jwt
 
 KEY_ID = os.environ.get("ASC_KEY_ID", "AA42M2D5C8")
 ISSUER_ID = os.environ.get("ASC_ISSUER_ID", "18daeaec-9343-4c57-9b01-481a7da981c6")
-KEY_PATH = Path(os.environ.get(
-    "ASC_KEY_PATH",
-    str(Path.home() / ".appstoreconnect" / "private_keys" / f"AuthKey_{KEY_ID}.p8"),
-))
+KEY_PATH = Path(
+    os.environ.get(
+        "ASC_KEY_PATH",
+        str(Path.home() / ".appstoreconnect" / "private_keys" / f"AuthKey_{KEY_ID}.p8"),
+    )
+)
 
 BASE = "https://api.appstoreconnect.apple.com/v1"
 
@@ -51,16 +54,23 @@ def token() -> str:
     return jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
 
 
-def request(method: str, path: str, body: dict | None = None, params: dict | None = None) -> dict:
+def request(
+    method: str, path: str, body: dict | None = None, params: dict | None = None
+) -> dict:
     url = f"{BASE}{path}"
     if params:
         qs = urllib.parse.urlencode(params)
         url = f"{url}?{qs}"
     payload = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(url, method=method, data=payload, headers={
-        "Authorization": f"Bearer {token()}",
-        "Content-Type": "application/json",
-    })
+    req = urllib.request.Request(
+        url,
+        method=method,
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {token()}",
+            "Content-Type": "application/json",
+        },
+    )
     try:
         with urllib.request.urlopen(req) as resp:
             raw = resp.read()
@@ -80,12 +90,16 @@ def find_app(bundle_id: str) -> dict:
 
 
 def list_builds(app_id: str, limit: int = 5) -> list[dict]:
-    data = request("GET", "/builds", params={
-        "filter[app]": app_id,
-        "sort": "-version",
-        "limit": limit,
-        "include": "buildBetaDetail",
-    })
+    data = request(
+        "GET",
+        "/builds",
+        params={
+            "filter[app]": app_id,
+            "sort": "-version",
+            "limit": limit,
+            "include": "buildBetaDetail",
+        },
+    )
     return data.get("data", [])
 
 
@@ -104,7 +118,9 @@ def build_beta_detail(build_id: str) -> dict:
     return data.get("data", {})
 
 
-def wait_until_processed(app_id: str, target_version: str | None = None, timeout: int = 1800) -> dict:
+def wait_until_processed(
+    app_id: str, target_version: str | None = None, timeout: int = 1800
+) -> dict:
     start = time.time()
     while time.time() - start < timeout:
         builds = list_builds(app_id, limit=5)
@@ -121,12 +137,18 @@ def wait_until_processed(app_id: str, target_version: str | None = None, timeout
             )
             if build is None:
                 elapsed = int(time.time() - start)
-                print(f"[{elapsed:4d}s] build {target_version} not yet ingested by Apple, waiting", flush=True)
+                print(
+                    f"[{elapsed:4d}s] build {target_version} not yet ingested by Apple, waiting",
+                    flush=True,
+                )
                 time.sleep(20)
                 continue
         state = build["attributes"].get("processingState", "UNKNOWN")
         elapsed = int(time.time() - start)
-        print(f"[{elapsed:4d}s] build {build['attributes']['version']} — {state}", flush=True)
+        print(
+            f"[{elapsed:4d}s] build {build['attributes']['version']} — {state}",
+            flush=True,
+        )
         if state == "VALID":
             return build
         if state in {"FAILED", "INVALID"}:
@@ -136,90 +158,140 @@ def wait_until_processed(app_id: str, target_version: str | None = None, timeout
 
 
 def set_export_compliance(build_id: str, uses_crypto: bool = False) -> None:
-    request("PATCH", f"/builds/{build_id}", body={
-        "data": {
-            "type": "builds",
-            "id": build_id,
-            "attributes": {"usesNonExemptEncryption": uses_crypto},
-        }
-    })
+    request(
+        "PATCH",
+        f"/builds/{build_id}",
+        body={
+            "data": {
+                "type": "builds",
+                "id": build_id,
+                "attributes": {"usesNonExemptEncryption": uses_crypto},
+            }
+        },
+    )
 
 
 def set_release_notes(build_id: str, notes: str, locale: str = "en-US") -> None:
     """Write TestFlight "What to Test" text via BuildBetaLocalizations."""
-    existing = request("GET", f"/builds/{build_id}/betaBuildLocalizations").get("data", [])
+    existing = request("GET", f"/builds/{build_id}/betaBuildLocalizations").get(
+        "data", []
+    )
     match = next((x for x in existing if x["attributes"].get("locale") == locale), None)
     if match:
-        request("PATCH", f"/betaBuildLocalizations/{match['id']}", body={
-            "data": {
-                "type": "betaBuildLocalizations",
-                "id": match["id"],
-                "attributes": {"whatsNew": notes},
-            }
-        })
+        request(
+            "PATCH",
+            f"/betaBuildLocalizations/{match['id']}",
+            body={
+                "data": {
+                    "type": "betaBuildLocalizations",
+                    "id": match["id"],
+                    "attributes": {"whatsNew": notes},
+                }
+            },
+        )
     else:
-        request("POST", "/betaBuildLocalizations", body={
-            "data": {
-                "type": "betaBuildLocalizations",
-                "attributes": {"whatsNew": notes, "locale": locale},
-                "relationships": {"build": {"data": {"type": "builds", "id": build_id}}},
-            }
-        })
+        request(
+            "POST",
+            "/betaBuildLocalizations",
+            body={
+                "data": {
+                    "type": "betaBuildLocalizations",
+                    "attributes": {"whatsNew": notes, "locale": locale},
+                    "relationships": {
+                        "build": {"data": {"type": "builds", "id": build_id}}
+                    },
+                }
+            },
+        )
 
 
 def ensure_internal_group(app_id: str, name: str = "Internal") -> dict:
-    groups = request("GET", "/betaGroups", params={
-        "filter[app]": app_id,
-        "filter[name]": name,
-        "limit": 1,
-    }).get("data", [])
+    groups = request(
+        "GET",
+        "/betaGroups",
+        params={
+            "filter[app]": app_id,
+            "filter[name]": name,
+            "limit": 1,
+        },
+    ).get("data", [])
     if groups:
         return groups[0]
-    created = request("POST", "/betaGroups", body={
-        "data": {
-            "type": "betaGroups",
-            "attributes": {"name": name, "isInternalGroup": True, "publicLinkEnabled": False},
-            "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
-        }
-    })
+    created = request(
+        "POST",
+        "/betaGroups",
+        body={
+            "data": {
+                "type": "betaGroups",
+                "attributes": {
+                    "name": name,
+                    "isInternalGroup": True,
+                    "publicLinkEnabled": False,
+                },
+                "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
+            }
+        },
+    )
     return created["data"]
 
 
 def ensure_external_group(app_id: str, name: str = "External Beta") -> dict:
-    groups = request("GET", "/betaGroups", params={
-        "filter[app]": app_id,
-        "filter[name]": name,
-        "limit": 1,
-    }).get("data", [])
+    groups = request(
+        "GET",
+        "/betaGroups",
+        params={
+            "filter[app]": app_id,
+            "filter[name]": name,
+            "limit": 1,
+        },
+    ).get("data", [])
     if groups:
         return groups[0]
-    created = request("POST", "/betaGroups", body={
-        "data": {
-            "type": "betaGroups",
-            "attributes": {
-                "name": name,
-                "publicLinkEnabled": True,
-                "publicLinkLimitEnabled": False,
-            },
-            "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
-        }
-    })
+    created = request(
+        "POST",
+        "/betaGroups",
+        body={
+            "data": {
+                "type": "betaGroups",
+                "attributes": {
+                    "name": name,
+                    "publicLinkEnabled": True,
+                    "publicLinkLimitEnabled": False,
+                },
+                "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
+            }
+        },
+    )
     return created["data"]
 
 
 def attach_build_to_group(build_id: str, group_id: str) -> None:
-    request("POST", f"/betaGroups/{group_id}/relationships/builds", body={
-        "data": [{"type": "builds", "id": build_id}],
-    })
+    request(
+        "POST",
+        f"/betaGroups/{group_id}/relationships/builds",
+        body={
+            "data": [{"type": "builds", "id": build_id}],
+        },
+    )
 
 
-def invite_tester(app_id: str, email: str, first: str = "", last: str = "", group_id: str | None = None) -> dict:
+def invite_tester(
+    app_id: str,
+    email: str,
+    first: str = "",
+    last: str = "",
+    group_id: str | None = None,
+) -> dict:
     """Invite a tester by email. If the email belongs to a team member (admin/developer),
     App Store Connect returns 409 — those accounts are testers implicitly via team membership."""
-    existing = request("GET", "/betaTesters", params={
-        "filter[email]": email,
-        "limit": 1,
-    }).get("data", [])
+    existing = request(
+        "GET",
+        "/betaTesters",
+        params={
+            "filter[email]": email,
+            "limit": 1,
+        },
+    ).get("data", [])
     if existing:
         tester = existing[0]
     else:
@@ -243,7 +315,9 @@ def invite_tester(app_id: str, email: str, first: str = "", last: str = "", grou
         except urllib.error.HTTPError as e:
             if e.code == 409:
                 # Already registered on this or another app — look up the existing record.
-                again = request("GET", "/betaTesters", params={"filter[email]": email, "limit": 1})
+                again = request(
+                    "GET", "/betaTesters", params={"filter[email]": email, "limit": 1}
+                )
                 hits = again.get("data", [])
                 if not hits:
                     raise
@@ -252,16 +326,21 @@ def invite_tester(app_id: str, email: str, first: str = "", last: str = "", grou
                 raise
     if group_id:
         try:
-            request("POST", f"/betaGroups/{group_id}/relationships/betaTesters", body={
-                "data": [{"type": "betaTesters", "id": tester["id"]}],
-            })
+            request(
+                "POST",
+                f"/betaGroups/{group_id}/relationships/betaTesters",
+                body={
+                    "data": [{"type": "betaTesters", "id": tester["id"]}],
+                },
+            )
         except urllib.error.HTTPError:
             pass  # Already in group — ignore.
     return tester
 
 
-def invite_team_user(email: str, first: str, last: str, app_id: str,
-                     role: str = "MARKETING") -> dict:
+def invite_team_user(
+    email: str, first: str, last: str, app_id: str, role: str = "MARKETING"
+) -> dict:
     """Invite a user to the App Store Connect team with limited app visibility.
     Required so the user can be added to a TestFlight Internal group (Apple
     restricts Internal groups to ASC team members)."""
@@ -285,12 +364,18 @@ def invite_team_user(email: str, first: str, last: str, app_id: str,
 
 
 def submit_for_beta_review(build_id: str) -> dict:
-    return request("POST", "/betaAppReviewSubmissions", body={
-        "data": {
-            "type": "betaAppReviewSubmissions",
-            "relationships": {"build": {"data": {"type": "builds", "id": build_id}}},
-        }
-    })
+    return request(
+        "POST",
+        "/betaAppReviewSubmissions",
+        body={
+            "data": {
+                "type": "betaAppReviewSubmissions",
+                "relationships": {
+                    "build": {"data": {"type": "builds", "id": build_id}}
+                },
+            }
+        },
+    )
 
 
 def set_review_contact(
@@ -303,20 +388,24 @@ def set_review_contact(
     notes: str = "",
 ) -> None:
     """Fill in the Beta App Review contact details required before submitting for external review."""
-    request("PATCH", f"/betaAppReviewDetails/{app_id}", body={
-        "data": {
-            "type": "betaAppReviewDetails",
-            "id": app_id,
-            "attributes": {
-                "contactFirstName": first,
-                "contactLastName": last,
-                "contactEmail": email,
-                "contactPhone": phone,
-                "demoAccountRequired": demo_account_required,
-                "notes": notes,
-            },
-        }
-    })
+    request(
+        "PATCH",
+        f"/betaAppReviewDetails/{app_id}",
+        body={
+            "data": {
+                "type": "betaAppReviewDetails",
+                "id": app_id,
+                "attributes": {
+                    "contactFirstName": first,
+                    "contactLastName": last,
+                    "contactEmail": email,
+                    "contactPhone": phone,
+                    "demoAccountRequired": demo_account_required,
+                    "notes": notes,
+                },
+            }
+        },
+    )
 
 
 def set_beta_app_info(
@@ -342,22 +431,30 @@ def set_beta_app_info(
     if tos_url:
         attrs["tosUrl"] = tos_url
     if match:
-        request("PATCH", f"/betaAppLocalizations/{match['id']}", body={
-            "data": {
-                "type": "betaAppLocalizations",
-                "id": match["id"],
-                "attributes": attrs,
-            }
-        })
+        request(
+            "PATCH",
+            f"/betaAppLocalizations/{match['id']}",
+            body={
+                "data": {
+                    "type": "betaAppLocalizations",
+                    "id": match["id"],
+                    "attributes": attrs,
+                }
+            },
+        )
     else:
         attrs["locale"] = locale
-        request("POST", "/betaAppLocalizations", body={
-            "data": {
-                "type": "betaAppLocalizations",
-                "attributes": attrs,
-                "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
-            }
-        })
+        request(
+            "POST",
+            "/betaAppLocalizations",
+            body={
+                "data": {
+                    "type": "betaAppLocalizations",
+                    "attributes": attrs,
+                    "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
+                }
+            },
+        )
 
 
 def main() -> int:
@@ -382,25 +479,40 @@ def main() -> int:
     p_invite.add_argument("email")
     p_invite.add_argument("--first", default="")
     p_invite.add_argument("--last", default="")
-    p_invite.add_argument("--group", default="Internal", help="Group name (Internal/External Beta)")
+    p_invite.add_argument(
+        "--group", default="Internal", help="Group name (Internal/External Beta)"
+    )
 
-    p_team = sub.add_parser("invite-team", help="Invite a user to the ASC team (required for TestFlight Internal access)")
+    p_team = sub.add_parser(
+        "invite-team",
+        help="Invite a user to the ASC team (required for TestFlight Internal access)",
+    )
     p_team.add_argument("email")
     p_team.add_argument("--first", required=True)
     p_team.add_argument("--last", required=True)
-    p_team.add_argument("--role", default="MARKETING",
-                         choices=["MARKETING", "DEVELOPER", "APP_MANAGER", "CUSTOMER_SUPPORT"])
+    p_team.add_argument(
+        "--role",
+        default="MARKETING",
+        choices=["MARKETING", "DEVELOPER", "APP_MANAGER", "CUSTOMER_SUPPORT"],
+    )
 
-    p_setup = sub.add_parser("setup-beta-info", help="Set Beta App Description + feedback email (required for external review)")
+    p_setup = sub.add_parser(
+        "setup-beta-info",
+        help="Set Beta App Description + feedback email (required for external review)",
+    )
     p_setup.add_argument("--description", required=True)
     p_setup.add_argument("--feedback-email", required=True)
     p_setup.add_argument("--privacy-url", default="")
     p_setup.add_argument("--marketing-url", default="")
 
-    p_external = sub.add_parser("submit-external", help="Submit build for Beta App Review")
+    p_external = sub.add_parser(
+        "submit-external", help="Submit build for Beta App Review"
+    )
     p_external.add_argument("--version")
 
-    p_activate = sub.add_parser("activate", help="Full pipeline: wait → compliance → internal group")
+    p_activate = sub.add_parser(
+        "activate", help="Full pipeline: wait → compliance → internal group"
+    )
     p_activate.add_argument("--version")
     p_activate.add_argument("--notes", help="What to Test text")
 
@@ -416,7 +528,9 @@ def main() -> int:
         print(f"App: {app['attributes']['name']} ({app_id})")
         for b in builds:
             a = b["attributes"]
-            print(f"  build {a['version']}  state={a['processingState']}  uploaded={a.get('uploadedDate', '')}")
+            print(
+                f"  build {a['version']}  state={a['processingState']}  uploaded={a.get('uploadedDate', '')}"
+            )
         return 0
 
     if args.cmd == "next-build-number":
@@ -475,7 +589,9 @@ def main() -> int:
     if args.cmd == "submit-external":
         build = wait_until_processed(app_id, args.version)
         sub_data = submit_for_beta_review(build["id"])
-        print(f"submitted build {build['id']} for Beta App Review → {sub_data['data']['id']}")
+        print(
+            f"submitted build {build['id']} for Beta App Review → {sub_data['data']['id']}"
+        )
         return 0
 
     if args.cmd == "activate":
@@ -488,7 +604,9 @@ def main() -> int:
             pass  # Already attached.
         if args.notes:
             set_release_notes(build["id"], args.notes)
-        print(f"✅ build {build['attributes']['version']} active in '{group['attributes']['name']}'")
+        print(
+            f"✅ build {build['attributes']['version']} active in '{group['attributes']['name']}'"
+        )
         return 0
 
     return 1

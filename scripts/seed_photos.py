@@ -12,6 +12,7 @@ Creates a mix of:
 Run: python3 seed_photos.py ./fixtures
 Then: xcrun simctl addmedia <udid> ./fixtures/*
 """
+
 from __future__ import annotations
 import argparse
 import math
@@ -46,13 +47,20 @@ def circles(size, count=8, seed=0):
         x = r.randint(0, size[0])
         y = r.randint(0, size[1])
         rad = r.randint(30, 200)
-        color = (r.randint(50, 255), r.randint(50, 255), r.randint(50, 255), r.randint(120, 220))
+        color = (
+            r.randint(50, 255),
+            r.randint(50, 255),
+            r.randint(50, 255),
+            r.randint(120, 220),
+        )
         draw.ellipse((x - rad, y - rad, x + rad, y + rad), fill=color)
     return img
 
 
 def add_noise(img, amount=4):
-    return Image.eval(img, lambda v: max(0, min(255, v + random.randint(-amount, amount))))
+    return Image.eval(
+        img, lambda v: max(0, min(255, v + random.randint(-amount, amount)))
+    )
 
 
 def make_screenshot(size=(1179, 2556), label="Meister Screenshot"):
@@ -64,7 +72,9 @@ def make_screenshot(size=(1179, 2556), label="Meister Screenshot"):
     # Content blocks
     for i in range(8):
         y = 200 + i * 260
-        draw.rounded_rectangle((40, y, size[0] - 40, y + 220), radius=24, fill=(48, 48, 54))
+        draw.rounded_rectangle(
+            (40, y, size[0] - 40, y + 220), radius=24, fill=(48, 48, 54)
+        )
         draw.rectangle((70, y + 40, 500, y + 80), fill=(220, 220, 220))
         draw.rectangle((70, y + 110, 900, y + 140), fill=(140, 140, 140))
     draw.text((60, 150), label, fill=(240, 240, 240))
@@ -111,22 +121,48 @@ def main():
     large_video = out / "largevideo_0.mp4"
     subprocess.run(
         [
-            "ffmpeg", "-y", "-f", "lavfi", "-i", "testsrc2=duration=8:size=1920x1080:rate=30",
-            "-c:v", "libx264", "-preset", "ultrafast", "-b:v", "8M", "-pix_fmt", "yuv420p",
-            str(large_video)
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=duration=8:size=1920x1080:rate=30",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-b:v",
+            "8M",
+            "-pix_fmt",
+            "yuv420p",
+            str(large_video),
         ],
-        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
     # 7. Screen recording — must start with "RPReplay" per iOS convention
     screen_rec = out / "RPReplay_Final_20260419_031500.mp4"
     subprocess.run(
         [
-            "ffmpeg", "-y", "-f", "lavfi", "-i", "testsrc2=duration=4:size=1179x2556:rate=30",
-            "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
-            str(screen_rec)
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=duration=4:size=1179x2556:rate=30",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            str(screen_rec),
         ],
-        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
     # Summary

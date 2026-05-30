@@ -12,8 +12,18 @@ STAGE=build/stage
 IPA_PATH=build/ipa/MeisterIOS.ipa
 PROF_DIR="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 DIST_IDENT="Apple Distribution: Marco Foellmer (K63X3ZTV3Q)"
+
+# Distribution provisioning profiles (update these when regenerating from Apple Developer portal)
+# Main app: com.merados.meister.ios
 APP_PROF="$PROF_DIR/cd8a9e93-68d4-4fff-a09f-2ff3b1485849.mobileprovision"
+# Widget extension: com.merados.meister.ios.widget
 EXT_PROF="$PROF_DIR/24e692da-bd73-4eaf-8dc8-25a44afc6e85.mobileprovision"
+
+# How to refresh:
+# 1. Go to https://developer.apple.com/account/resources/profiles/list
+# 2. Create / regenerate "App Store" Distribution profiles for the two bundle IDs above
+# 3. Download the new .mobileprovision files into $PROF_DIR
+# 4. Update the two *_PROF lines with the new filenames (which are the UUIDs)
 
 [ -d "$APP" ] || { echo "archive missing — run xcodebuild archive first"; exit 1; }
 
