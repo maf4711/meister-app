@@ -1,42 +1,5 @@
-import CoreImage
 import Photos
 import UIKit
-
-/// 64-bit perceptual hash (aHash variant: 8×8 downsample + mean threshold).
-/// Good enough for burst/near-duplicate detection; cheap to compute on-device.
-enum PerceptualHash {
-    static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
-
-    /// Compute pHash from a thumbnail-sized UIImage.
-    static func hash(_ image: UIImage) -> UInt64? {
-        guard let cg = image.cgImage else { return nil }
-        let ci = CIImage(cgImage: cg)
-        // Resize to 8x8 grayscale
-        let resized = ci
-            .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0.0])
-            .applyingFilter("CILanczosScaleTransform", parameters: [
-                kCIInputScaleKey: 8.0 / CGFloat(cg.width),
-                kCIInputAspectRatioKey: 1.0
-            ])
-        let rect = CGRect(x: 0, y: 0, width: 8, height: 8)
-        guard let bitmap = ciContext.createCGImage(resized, from: rect) else { return nil }
-        var pixels = [UInt8](repeating: 0, count: 64)
-        let ctx = CGContext(
-            data: &pixels, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 8,
-            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
-        )
-        ctx?.draw(bitmap, in: rect)
-        let mean = pixels.reduce(0) { Int($0) + Int($1) } / 64
-        var bits: UInt64 = 0
-        for i in 0..<64 where Int(pixels[i]) > mean { bits |= (1 << i) }
-        return bits
-    }
-
-    /// Hamming distance — number of differing bits (0 = identical, 64 = inverse).
-    static func distance(_ a: UInt64, _ b: UInt64) -> Int {
-        (a ^ b).nonzeroBitCount
-    }
-}
 
 enum PhotoThumbnailLoader {
     /// Fetch a thumbnail suitable for hashing. Cheap — uses the in-app image manager.

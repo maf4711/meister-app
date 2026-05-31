@@ -7,7 +7,7 @@ import SwiftUI
 @MainActor
 final class PhotosViewModel {
     var library: [PhotoItem] = []
-    var duplicateGroups: [DuplicateDetector.Group] = []
+    var duplicateGroups: [SimilarityClustering.Cluster] = []
     var screenshots: [PhotoItem] = []
     var screenRecordings: [PhotoItem] = []
     var blurryPhotos: [(PhotoItem, Double)] = []
@@ -38,8 +38,8 @@ final class PhotosViewModel {
         scanProgress = 0.1
         currentPhase = "Detecting duplicates — 0/\(fetched.count)"
 
-        let detector = DuplicateDetector(threshold: 5)
-        duplicateGroups = await detector.scan(items: fetched) { [weak self] value in
+        let detector = SimilarityClustering(distanceThreshold: 0.5)
+        duplicateGroups = await detector.cluster(fetched) { [weak self] value in
             Task { @MainActor in
                 guard let self else { return }
                 self.scanProgress = 0.1 + value * 0.55
@@ -74,10 +74,10 @@ final class PhotosViewModel {
             blurryPhotos.removeAll { deletedIDs.contains($0.0.asset.localIdentifier) }
             largeMedia.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
             duplicateGroups = duplicateGroups
-                .map { group -> DuplicateDetector.Group in
-                    var copy = group
-                    copy.items.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
-                    return copy
+                .map { group in
+                    SimilarityClustering.Cluster(
+                        items: group.items.filter { !deletedIDs.contains($0.asset.localIdentifier) }
+                    )
                 }
                 .filter { $0.items.count > 1 }   // drop groups that no longer have duplicates
         } catch {
@@ -314,7 +314,7 @@ struct PhotosCleanerView: View {
 /// A sheet that shows duplicate groups and lets the user delete all but the
 /// largest copy. Uses a confirmation dialog for the destructive action.
 struct DuplicateGroupsView: View {
-    let groups: [DuplicateDetector.Group]
+    let groups: [SimilarityClustering.Cluster]
     let onDelete: ([PHAsset]) -> Void
 
     @Environment(\.dismiss) private var dismiss

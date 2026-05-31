@@ -41,34 +41,52 @@ actor SimilarityClustering {
             progress(Double(index + 1) / Double(total))
         }
 
-        // Union-find grouping by feature-print distance.
-        var parent = Array(0..<photos.count)
-        func find(_ i: Int) -> Int { parent[i] == i ? i : { parent[i] = find(parent[i]); return parent[i] }() }
-        func union(_ i: Int, _ j: Int) {
-            let (ri, rj) = (find(i), find(j)); if ri != rj { parent[ri] = rj }
-        }
-
-        for i in 0..<photos.count {
-            guard let a = fingerprints[photos[i].id] else { continue }
-            for j in (i + 1)..<photos.count {
-                guard let b = fingerprints[photos[j].id] else { continue }
-                var distance: Float = 0
-                do {
-                    try a.computeDistance(&distance, to: b)
-                    if distance < distanceThreshold { union(i, j) }
-                } catch {
-                    continue
-                }
+        // Group by feature-print distance. Photos without a fingerprint can't be
+        // compared, so they're dropped from the index space (they could only ever
+        // be singletons anyway, which are filtered out).
+        let fpPhotos = photos.filter { fingerprints[$0.id] != nil }
+        let observations = fpPhotos.map { fingerprints[$0.id]! }
+        let indexClusters = Self.groupIndices(count: fpPhotos.count, threshold: distanceThreshold) { i, j in
+            var distance: Float = 0
+            do {
+                try observations[i].computeDistance(&distance, to: observations[j])
+                return distance
+            } catch {
+                return .greatestFiniteMagnitude
             }
         }
-        var clusters: [Int: [PhotoItem]] = [:]
-        for i in 0..<photos.count {
-            clusters[find(i), default: []].append(photos[i])
-        }
-        return clusters.values
-            .filter { $0.count > 1 }
-            .map { Cluster(items: $0) }
+        return indexClusters
+            .map { Cluster(items: $0.map { fpPhotos[$0] }) }
             .sorted { $0.reclaimableBytes > $1.reclaimableBytes }
+    }
+
+    /// Pure, deterministic single-link union-find over an injected distance function.
+    /// Returns clusters of size > 1, each index list sorted ascending, groups sorted
+    /// by their smallest index. Extracted so the grouping logic is unit-testable
+    /// without PHAsset/Vision. Indices `i, j` pair iff `distance(i, j) < threshold`.
+    static func groupIndices(
+        count: Int,
+        threshold: Float,
+        distance: (Int, Int) -> Float
+    ) -> [[Int]] {
+        guard count > 1 else { return [] }
+        var parent = Array(0..<count)
+        func find(_ i: Int) -> Int { parent[i] == i ? i : { parent[i] = find(parent[i]); return parent[i] }() }
+        func union(_ i: Int, _ j: Int) {
+            let (ri, rj) = (find(i), find(j))
+            if ri != rj { parent[max(ri, rj)] = min(ri, rj) }
+        }
+        for i in 0..<count {
+            for j in (i + 1)..<count where distance(i, j) < threshold {
+                union(i, j)
+            }
+        }
+        var groups: [Int: [Int]] = [:]
+        for i in 0..<count { groups[find(i), default: []].append(i) }
+        return groups.values
+            .filter { $0.count > 1 }
+            .map { $0.sorted() }
+            .sorted { $0[0] < $1[0] }
     }
 
     private func featurePrint(for image: UIImage) async -> VNFeaturePrintObservation? {
