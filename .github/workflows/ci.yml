@@ -1,0 +1,89 @@
+name: CI
+
+# Minimal CI for the Meister iOS app: generate the project, build the test
+# target, and run the unit tests on a simulator.
+#
+# Runner: GitHub-hosted macos-15. NOTE: the team builds locally with Xcode 26.5,
+# which hosted runners do NOT have — this uses the runner's latest-stable Xcode.
+# If a build breaks only here, suspect that version gap first.
+#
+# Dependency: MeisterIOS depends on the PRIVATE SPM package
+# MeradosUG/meradOS-Design4 via the hardcoded sibling path
+# `../meradOS/merados-design4` in project.yml. xcodegen reads that path
+# literally, so CI clones the package to exactly that location. The clone needs
+# a token with read access to that repo, stored as the secret DESIGN_REPO_TOKEN
+# (Settings → Secrets and variables → Actions). Without it the job fails at the
+# clone step with a clear message.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout meister-app
+        uses: actions/checkout@v4
+
+      - name: Select latest-stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Report toolchain
+        run: xcodebuild -version
+
+      - name: Clone MeradOSDesign4 sibling dependency
+        # project.yml references ../meradOS/merados-design4 relative to the repo
+        # root, so the clone target dir name must be exactly `merados-design4`.
+        env:
+          TOKEN: ${{ secrets.DESIGN_REPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::DESIGN_REPO_TOKEN secret is not set — cannot clone the private MeradOSDesign4 dependency."
+            exit 1
+          fi
+          git clone --depth 1 \
+            "https://x-access-token:${TOKEN}@github.com/MeradosUG/meradOS-Design4.git" \
+            "${GITHUB_WORKSPACE}/../meradOS/merados-design4"
+
+      - name: Verify design dependency present
+        run: ./scripts/ensure-design-system.sh
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project Meister.xcodeproj -scheme MeisterIOS
+
+      - name: Select an available iPhone simulator
+        # Pick the first available iPhone rather than hardcoding a device name
+        # that can drift between runner images.
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; ids=[v['udid'] for rt in sorted(d) if 'iOS' in rt for v in d[rt] if 'iPhone' in v['name'] and v['isAvailable']]; print(ids[0] if ids else '')")
+          if [ -z "$UDID" ]; then
+            echo "::error::No available iPhone simulator on this runner."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator $UDID"
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Build for testing
+        # xcodebuild's own exit code is the gate — a build error fails the job.
+        run: xcodebuild build-for-testing -project Meister.xcodeproj -scheme MeisterIOS -destination "id=${SIM_UDID}" -derivedDataPath .build-ci
+
+      - name: Run unit tests
+        run: xcodebuild test-without-building -project Meister.xcodeproj -scheme MeisterIOS -destination "id=${SIM_UDID}" -derivedDataPath .build-ci
