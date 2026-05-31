@@ -118,7 +118,7 @@ struct PhotosCleanerView: View {
         // Never bulk-delete favorites or edited photos, in any category.
         model.screenshots.forEach { if !$0.isProtected { add($0.asset) } }
         model.screenRecordings.forEach { if !$0.isProtected { add($0.asset) } }
-        model.blurryPhotos.forEach { if !$0.0.isProtected { add($0.asset) } }
+        model.blurryPhotos.forEach { if !$0.0.isProtected { add($0.0.asset) } }
         return out
     }
 
