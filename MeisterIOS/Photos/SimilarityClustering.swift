@@ -8,12 +8,34 @@ import Vision
 ///
 /// Complexity: O(n²) feature comparisons + O(n × thumbnail-decode) for extraction.
 /// On-device, ~500 photos take 10–20 s.
+/// Minimal seam over a photo for pure keeper/reclaimable math — lets the logic be
+/// unit-tested without constructing a PHAsset (see issue #26).
+protocol SizedPhoto {
+    var id: String { get }
+    var sizeBytes: Int64 { get }
+}
+
+extension PhotoItem: SizedPhoto {}
+
 actor SimilarityClustering {
     struct Cluster: Identifiable {
         let id = UUID()
         let items: [PhotoItem]
+        /// The frame to KEEP — the best shot (sharpness + face quality), not just
+        /// the largest file. Resolved from `BestShotSelector`; falls back to the
+        /// largest-bytes heuristic when no best shot is supplied.
+        let keeperID: String?
+
+        init(items: [PhotoItem], keeperID: String? = nil) {
+            self.items = items
+            self.keeperID = keeperID ?? SimilarityClustering.fallbackKeeperID(items)
+        }
+
+        /// Copies the user can delete — everything except the keeper.
+        var deletable: [PhotoItem] { items.filter { $0.id != keeperID } }
+
         var reclaimableBytes: Int64 {
-            items.sorted { $0.sizeBytes > $1.sizeBytes }.dropFirst().reduce(0) { $0 + $1.sizeBytes }
+            SimilarityClustering.reclaimableBytes(items, keeperID: keeperID ?? "")
         }
     }
 
@@ -55,9 +77,14 @@ actor SimilarityClustering {
                 return .greatestFiniteMagnitude
             }
         }
-        return indexClusters
-            .map { Cluster(items: $0.map { fpPhotos[$0] }) }
-            .sorted { $0.reclaimableBytes > $1.reclaimableBytes }
+        var result: [Cluster] = []
+        for idxs in indexClusters {
+            let clusterItems = idxs.map { fpPhotos[$0] }
+            // Keep the best shot (sharpness + face quality), not the largest file.
+            let keeper = await BestShotSelector.pickBest(in: clusterItems)?.id
+            result.append(Cluster(items: clusterItems, keeperID: keeper))
+        }
+        return result.sorted { $0.reclaimableBytes > $1.reclaimableBytes }
     }
 
     /// Pure, deterministic single-link union-find over an injected distance function.
@@ -87,6 +114,20 @@ actor SimilarityClustering {
             .filter { $0.count > 1 }
             .map { $0.sorted() }
             .sorted { $0[0] < $1[0] }
+    }
+
+    /// Bytes freed by keeping `keeperID` and deleting the rest. If the keeper is
+    /// not present (e.g. already deleted), every item counts as reclaimable.
+    static func reclaimableBytes<T: SizedPhoto>(_ items: [T], keeperID: String) -> Int64 {
+        items.filter { $0.id != keeperID }.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    /// Fallback keeper when no best-shot is known: the largest file, tie-broken to
+    /// the smallest id so the choice is deterministic regardless of input order.
+    static func fallbackKeeperID<T: SizedPhoto>(_ items: [T]) -> String? {
+        items.max { a, b in
+            a.sizeBytes != b.sizeBytes ? a.sizeBytes < b.sizeBytes : a.id > b.id
+        }?.id
     }
 
     private func featurePrint(for image: UIImage) async -> VNFeaturePrintObservation? {

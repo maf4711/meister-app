@@ -102,9 +102,8 @@ struct PhotosCleanerView: View {
             if ids.insert(a.localIdentifier).inserted { out.append(a) }
         }
         for group in model.duplicateGroups {
-            // Drop the largest, keep the others as deletion candidates.
-            let sorted = group.items.sorted { $0.sizeBytes > $1.sizeBytes }
-            for copy in sorted.dropFirst() { add(copy.asset) }
+            // Keep the best shot; the rest are deletion candidates.
+            for copy in group.deletable { add(copy.asset) }
         }
         model.screenshots.forEach { add($0.asset) }
         model.screenRecordings.forEach { add($0.asset) }
@@ -312,7 +311,7 @@ struct PhotosCleanerView: View {
 }
 
 /// A sheet that shows duplicate groups and lets the user delete all but the
-/// largest copy. Uses a confirmation dialog for the destructive action.
+/// best shot. Uses a confirmation dialog for the destructive action.
 struct DuplicateGroupsView: View {
     let groups: [SimilarityClustering.Cluster]
     let onDelete: ([PHAsset]) -> Void
@@ -328,10 +327,7 @@ struct DuplicateGroupsView: View {
                         AssetThumbnailRow(item: item)
                     }
                     Button(role: .destructive) {
-                        let keeper = group.items.max { $0.sizeBytes < $1.sizeBytes }?.id
-                        pendingDeletion = group.items
-                            .filter { $0.id != keeper }
-                            .map(\.asset)
+                        pendingDeletion = group.deletable.map(\.asset)
                     } label: {
                         Label("Delete Copies", systemImage: "trash")
                     }
@@ -357,7 +353,7 @@ struct DuplicateGroupsView: View {
                 }
                 Button("Cancel", role: .cancel) { pendingDeletion = nil }
             } message: { _ in
-                Text("The largest copy is kept. Deleted items move to the Recently Deleted album for 30 days.")
+                Text("The best shot is kept. Deleted items move to the Recently Deleted album for 30 days.")
             }
         }
     }
