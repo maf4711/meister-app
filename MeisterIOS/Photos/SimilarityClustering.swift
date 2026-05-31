@@ -17,6 +17,15 @@ protocol SizedPhoto {
 
 extension PhotoItem: SizedPhoto {}
 
+/// Seam for deletion-candidate logic — id + whether the photo is protected
+/// (favorite/edited). Lets the safety rules be unit-tested without a PHAsset.
+protocol DuplicateCandidate {
+    var id: String { get }
+    var isProtected: Bool { get }
+}
+
+extension PhotoItem: DuplicateCandidate {}
+
 actor SimilarityClustering {
     struct Cluster: Identifiable {
         let id = UUID()
@@ -31,12 +40,18 @@ actor SimilarityClustering {
             self.keeperID = keeperID ?? SimilarityClustering.fallbackKeeperID(items)
         }
 
-        /// Copies the user can delete — everything except the keeper.
-        var deletable: [PhotoItem] { items.filter { $0.id != keeperID } }
-
-        var reclaimableBytes: Int64 {
-            SimilarityClustering.reclaimableBytes(items, keeperID: keeperID ?? "")
+        /// Copies the user can delete: everything except the keeper AND except any
+        /// favorite/edited photo (never auto-deleted). Empty when there is no valid
+        /// keeper in the set — a fail-safe so a whole group is never offered for
+        /// deletion. See `SimilarityClustering.deletableIDs`.
+        var deletable: [PhotoItem] {
+            let ids = Set(SimilarityClustering.deletableIDs(items, keeperID: keeperID))
+            return items.filter { ids.contains($0.id) }
         }
+
+        /// Bytes actually freed if the user deletes the candidates — i.e. the
+        /// `deletable` set, which already excludes the keeper and protected photos.
+        var reclaimableBytes: Int64 { deletable.reduce(0) { $0 + $1.sizeBytes } }
     }
 
     /// Outcome of a clustering run: the duplicate clusters plus the ids of photos
@@ -61,7 +76,10 @@ actor SimilarityClustering {
         _ items: [PhotoItem],
         progress: @Sendable @escaping (Double) -> Void = { _ in }
     ) async -> ClusterResult {
-        let photos = items.filter { !$0.isVideo }
+        // Exclude videos and burst stacks. Bursts are intentional multi-frame
+        // captures, not accidental duplicates — offering all-but-one for deletion
+        // would destroy the stack the user deliberately shot.
+        let photos = items.filter { !$0.isVideo && !$0.isBurst }
         guard photos.count > 1 else { return ClusterResult(clusters: [], failedIDs: []) }
 
         var fingerprints: [String: VNFeaturePrintObservation] = [:]
@@ -192,6 +210,23 @@ actor SimilarityClustering {
     /// photos aren't silently treated as unique. Preserves the input order.
     static func failedIDs(allIDs: [String], fingerprintedIDs: Set<String>) -> [String] {
         allIDs.filter { !fingerprintedIDs.contains($0) }
+    }
+
+    /// Ids safe to offer for deletion: everything except the keeper and except
+    /// protected (favorite/edited) photos. Returns [] when `keeperID` is nil or not
+    /// present in `items` — a fail-safe guaranteeing a whole group is never deletable.
+    static func deletableIDs<T: DuplicateCandidate>(_ items: [T], keeperID: String?) -> [String] {
+        guard let keeperID, items.contains(where: { $0.id == keeperID }) else { return [] }
+        return items.filter { $0.id != keeperID && !$0.isProtected }.map(\.id)
+    }
+
+    /// The keeper to use after an in-session deletion: keep the chosen best-shot
+    /// keeper if it survived; return nil (let the Cluster re-derive one) only when
+    /// the keeper itself was deleted. Prevents the keeper silently flipping to the
+    /// largest-file fallback for groups whose keeper was untouched.
+    static func preservedKeeperID(current: String?, survivingIDs: Set<String>) -> String? {
+        guard let current, survivingIDs.contains(current) else { return nil }
+        return current
     }
 
     /// Aspect-preserving size that fits `(pixelWidth, pixelHeight)` inside a

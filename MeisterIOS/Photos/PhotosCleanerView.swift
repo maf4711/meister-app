@@ -80,9 +80,14 @@ final class PhotosViewModel {
             largeMedia.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
             duplicateGroups = duplicateGroups
                 .map { group in
-                    SimilarityClustering.Cluster(
-                        items: group.items.filter { !deletedIDs.contains($0.asset.localIdentifier) }
+                    let survivors = group.items.filter { !deletedIDs.contains($0.asset.localIdentifier) }
+                    // Preserve the chosen best-shot keeper if it survived; only let
+                    // the Cluster re-derive one when the keeper itself was deleted.
+                    let keeperID = SimilarityClustering.preservedKeeperID(
+                        current: group.keeperID,
+                        survivingIDs: Set(survivors.map(\.id))
                     )
+                    return SimilarityClustering.Cluster(items: survivors, keeperID: keeperID)
                 }
                 .filter { $0.items.count > 1 }   // drop groups that no longer have duplicates
         } catch {
@@ -203,7 +208,7 @@ struct PhotosCleanerView: View {
                 Section("Reclaim") {
                     summaryRow(
                         .duplicates,
-                        itemCount: model.duplicateGroups.reduce(0) { $0 + $1.items.count - 1 },
+                        itemCount: model.duplicateGroups.reduce(0) { $0 + $1.deletable.count },
                         reclaimable: model.duplicateGroups.reduce(0) { $0 + $1.reclaimableBytes }
                     )
                     summaryRow(.screenshots, itemCount: model.screenshots.count,
