@@ -8,6 +8,9 @@ import SwiftUI
 final class PhotosViewModel {
     var library: [PhotoItem] = []
     var duplicateGroups: [SimilarityClustering.Cluster] = []
+    /// Photos whose fingerprint couldn't be computed (e.g. iCloud-only) — surfaced
+    /// so the user knows they were skipped, not silently treated as unique.
+    var unanalyzedCount = 0
     var screenshots: [PhotoItem] = []
     var screenRecordings: [PhotoItem] = []
     var blurryPhotos: [(PhotoItem, Double)] = []
@@ -39,7 +42,7 @@ final class PhotosViewModel {
         currentPhase = "Detecting duplicates — 0/\(fetched.count)"
 
         let detector = SimilarityClustering(distanceThreshold: 0.5)
-        duplicateGroups = await detector.cluster(fetched) { [weak self] value in
+        let dupResult = await detector.cluster(fetched) { [weak self] value in
             Task { @MainActor in
                 guard let self else { return }
                 self.scanProgress = 0.1 + value * 0.55
@@ -47,6 +50,8 @@ final class PhotosViewModel {
                 self.currentPhase = "Detecting duplicates — \(done)/\(fetched.count)"
             }
         }
+        duplicateGroups = dupResult.clusters
+        unanalyzedCount = dupResult.failedIDs.count
 
         currentPhase = "Checking for blur — 0/\(fetched.count)"
         blurryPhotos = await BlurDetector.scan(items: fetched, threshold: 0.002) { [weak self] value in
@@ -209,6 +214,11 @@ struct PhotosCleanerView: View {
                                reclaimable: totalBytes(model.blurryPhotos.map(\.0)))
                     summaryRow(.large, itemCount: model.largeMedia.count,
                                reclaimable: totalBytes(model.largeMedia))
+                    if model.unanalyzedCount > 0 {
+                        Text("^[\(model.unanalyzedCount) photo](inflect: true) couldn't be analyzed (still in iCloud). Re-run with Wi-Fi to include them.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section {

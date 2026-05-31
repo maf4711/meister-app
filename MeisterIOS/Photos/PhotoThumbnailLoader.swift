@@ -5,7 +5,11 @@ enum PhotoThumbnailLoader {
     /// Fetch a thumbnail suitable for hashing. Cheap — uses the in-app image manager.
     /// Guarantees a single continuation resume (needed because `.opportunistic` can
     /// call back twice), and caps the wait so one stalled asset can't freeze a scan.
-    static func thumbnail(for asset: PHAsset, size: CGSize = .init(width: 128, height: 128)) async -> UIImage? {
+    static func thumbnail(
+        for asset: PHAsset,
+        size: CGSize = .init(width: 128, height: 128),
+        contentMode: PHImageContentMode = .aspectFill
+    ) async -> UIImage? {
         await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
             let options = PHImageRequestOptions()
             options.resizeMode = .fast
@@ -17,7 +21,7 @@ enum PhotoThumbnailLoader {
             let requestID = PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: size,
-                contentMode: .aspectFill,
+                contentMode: contentMode,
                 options: options
             ) { image, _ in
                 resumeBox.resume(with: image)

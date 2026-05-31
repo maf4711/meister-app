@@ -39,33 +39,52 @@ actor SimilarityClustering {
         }
     }
 
+    /// Outcome of a clustering run: the duplicate clusters plus the ids of photos
+    /// whose fingerprint could not be computed (iCloud-only, decode failure, …) so
+    /// the UI can tell the user "N photos couldn't be analyzed" instead of silently
+    /// pretending they're unique.
+    struct ClusterResult {
+        let clusters: [Cluster]
+        let failedIDs: [String]
+    }
+
     /// Vision distance threshold — lower = stricter. 0.5 is a sane default for near-duplicates.
     let distanceThreshold: Float
+
+    /// Pin the feature-print algorithm revision so results are stable across OS
+    /// updates (a new default revision would silently shift distances/threshold).
+    static let featurePrintRevision = VNGenerateImageFeaturePrintRequest.currentRevision
 
     init(distanceThreshold: Float = 0.5) { self.distanceThreshold = distanceThreshold }
 
     func cluster(
         _ items: [PhotoItem],
         progress: @Sendable @escaping (Double) -> Void = { _ in }
-    ) async -> [Cluster] {
+    ) async -> ClusterResult {
         let photos = items.filter { !$0.isVideo }
-        guard photos.count > 1 else { return [] }
+        guard photos.count > 1 else { return ClusterResult(clusters: [], failedIDs: []) }
 
         var fingerprints: [String: VNFeaturePrintObservation] = [:]
         let total = photos.count
         for (index, item) in photos.enumerated() {
+            // Aspect-preserving thumbnail — a forced 299×299 square distorts the
+            // image before fingerprinting, hurting Vision's crop/rotation matching.
+            let size = Self.fittedSize(
+                pixelWidth: item.pixelWidth, pixelHeight: item.pixelHeight, maxDimension: 299
+            )
             if let thumb = await PhotoThumbnailLoader.thumbnail(
-                for: item.asset,
-                size: CGSize(width: 299, height: 299)
+                for: item.asset, size: size, contentMode: .aspectFit
             ), let observation = await featurePrint(for: thumb) {
                 fingerprints[item.id] = observation
             }
             progress(Double(index + 1) / Double(total))
         }
 
+        let failed = Self.failedIDs(allIDs: photos.map(\.id), fingerprintedIDs: Set(fingerprints.keys))
+
         // Group by feature-print distance. Photos without a fingerprint can't be
-        // compared, so they're dropped from the index space (they could only ever
-        // be singletons anyway, which are filtered out).
+        // compared, so they're dropped from the index space (they're reported as
+        // failed above rather than silently treated as unique).
         let fpPhotos = photos.filter { fingerprints[$0.id] != nil }
         let observations = fpPhotos.map { fingerprints[$0.id]! }
         let indexClusters = Self.groupIndices(count: fpPhotos.count, threshold: distanceThreshold) { i, j in
@@ -84,7 +103,10 @@ actor SimilarityClustering {
             let keeper = await BestShotSelector.pickBest(in: clusterItems)?.id
             result.append(Cluster(items: clusterItems, keeperID: keeper))
         }
-        return result.sorted { $0.reclaimableBytes > $1.reclaimableBytes }
+        return ClusterResult(
+            clusters: result.sorted { $0.reclaimableBytes > $1.reclaimableBytes },
+            failedIDs: failed
+        )
     }
 
     /// Pure, deterministic **complete-link** (diameter-capped) clustering over an
@@ -166,16 +188,57 @@ actor SimilarityClustering {
         }?.id
     }
 
+    /// Ids in `allIDs` that did not get a fingerprint — reported to the UI so failed
+    /// photos aren't silently treated as unique. Preserves the input order.
+    static func failedIDs(allIDs: [String], fingerprintedIDs: Set<String>) -> [String] {
+        allIDs.filter { !fingerprintedIDs.contains($0) }
+    }
+
+    /// Aspect-preserving size that fits `(pixelWidth, pixelHeight)` inside a
+    /// `maxDimension` box without upscaling. Avoids the square-squash that distorts
+    /// the image before fingerprinting. Falls back to a square for unknown sizes.
+    static func fittedSize(pixelWidth: Int, pixelHeight: Int, maxDimension: CGFloat) -> CGSize {
+        guard pixelWidth > 0, pixelHeight > 0 else {
+            return CGSize(width: maxDimension, height: maxDimension)
+        }
+        let w = CGFloat(pixelWidth), h = CGFloat(pixelHeight)
+        let scale = maxDimension / max(w, h)
+        guard scale < 1 else { return CGSize(width: w, height: h) }  // never upscale
+        return CGSize(width: (w * scale).rounded(), height: (h * scale).rounded())
+    }
+
     private func featurePrint(for image: UIImage) async -> VNFeaturePrintObservation? {
         guard let cgImage = image.cgImage else { return nil }
+        // `cgImage` drops UIImage.imageOrientation, so a portrait shot taken in
+        // landscape orientation would fingerprint rotated. Pass the orientation
+        // explicitly so visually-equal photos match regardless of EXIF rotation.
+        let orientation = CGImagePropertyOrientation(image.imageOrientation)
         return await withCheckedContinuation { continuation in
             let request = VNGenerateImageFeaturePrintRequest { request, _ in
                 continuation.resume(returning: request.results?.first as? VNFeaturePrintObservation)
             }
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            request.revision = Self.featurePrintRevision
+            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
             DispatchQueue.global(qos: .userInitiated).async {
                 try? handler.perform([request])
             }
+        }
+    }
+}
+
+extension CGImagePropertyOrientation {
+    /// Map UIKit's image orientation to the ImageIO orientation Vision expects.
+    init(_ orientation: UIImage.Orientation) {
+        switch orientation {
+        case .up: self = .up
+        case .down: self = .down
+        case .left: self = .left
+        case .right: self = .right
+        case .upMirrored: self = .upMirrored
+        case .downMirrored: self = .downMirrored
+        case .leftMirrored: self = .leftMirrored
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
         }
     }
 }
