@@ -79,7 +79,7 @@ actor SimilarityClustering {
         // Exclude videos and burst stacks. Bursts are intentional multi-frame
         // captures, not accidental duplicates — offering all-but-one for deletion
         // would destroy the stack the user deliberately shot.
-        let photos = items.filter { !$0.isVideo && !$0.isBurst }
+        let photos = items.filter { Self.isEligibleForDedup(isVideo: $0.isVideo, isBurst: $0.isBurst) }
         guard photos.count > 1 else { return ClusterResult(clusters: [], failedIDs: []) }
 
         var fingerprints: [String: VNFeaturePrintObservation] = [:]
@@ -192,12 +192,6 @@ actor SimilarityClustering {
             .sorted { $0[0] < $1[0] }
     }
 
-    /// Bytes freed by keeping `keeperID` and deleting the rest. If the keeper is
-    /// not present (e.g. already deleted), every item counts as reclaimable.
-    static func reclaimableBytes<T: SizedPhoto>(_ items: [T], keeperID: String) -> Int64 {
-        items.filter { $0.id != keeperID }.reduce(0) { $0 + $1.sizeBytes }
-    }
-
     /// Fallback keeper when no best-shot is known: the largest file, tie-broken to
     /// the smallest id so the choice is deterministic regardless of input order.
     static func fallbackKeeperID<T: SizedPhoto>(_ items: [T]) -> String? {
@@ -210,6 +204,14 @@ actor SimilarityClustering {
     /// photos aren't silently treated as unique. Preserves the input order.
     static func failedIDs(allIDs: [String], fingerprintedIDs: Set<String>) -> [String] {
         allIDs.filter { !fingerprintedIDs.contains($0) }
+    }
+
+    /// Whether a photo may take part in duplicate detection. Videos aren't photos;
+    /// bursts are intentional multi-frame captures, not accidental duplicates, so
+    /// they're excluded to keep `cluster()` from ever offering a burst frame for
+    /// deletion. Pure so the data-loss-relevant exclusion is unit-tested.
+    static func isEligibleForDedup(isVideo: Bool, isBurst: Bool) -> Bool {
+        !isVideo && !isBurst
     }
 
     /// Ids safe to offer for deletion: everything except the keeper and except

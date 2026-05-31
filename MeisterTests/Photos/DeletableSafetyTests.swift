@@ -77,4 +77,23 @@ final class DeletableSafetyTests: XCTestCase {
     func testNilCurrentKeeperStaysNil() {
         XCTAssertNil(SimilarityClustering.preservedKeeperID(current: nil, survivingIDs: ["a"]))
     }
+
+    // MARK: isEligibleForDedup — bursts & videos must never enter clustering
+
+    func testPlainPhotoIsEligible() {
+        XCTAssertTrue(SimilarityClustering.isEligibleForDedup(isVideo: false, isBurst: false))
+    }
+
+    func testVideoIsNotEligible() {
+        XCTAssertFalse(SimilarityClustering.isEligibleForDedup(isVideo: true, isBurst: false))
+    }
+
+    func testBurstFrameIsNotEligible() {
+        // intentional burst captures must never be offered for deletion
+        XCTAssertFalse(SimilarityClustering.isEligibleForDedup(isVideo: false, isBurst: true))
+    }
+
+    func testBurstVideoIsNotEligible() {
+        XCTAssertFalse(SimilarityClustering.isEligibleForDedup(isVideo: true, isBurst: true))
+    }
 }
