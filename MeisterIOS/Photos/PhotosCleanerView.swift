@@ -7,7 +7,10 @@ import SwiftUI
 @MainActor
 final class PhotosViewModel {
     var library: [PhotoItem] = []
-    var duplicateGroups: [DuplicateDetector.Group] = []
+    var duplicateGroups: [SimilarityClustering.Cluster] = []
+    /// Photos whose fingerprint couldn't be computed (e.g. iCloud-only) — surfaced
+    /// so the user knows they were skipped, not silently treated as unique.
+    var unanalyzedCount = 0
     var screenshots: [PhotoItem] = []
     var screenRecordings: [PhotoItem] = []
     var blurryPhotos: [(PhotoItem, Double)] = []
@@ -38,8 +41,8 @@ final class PhotosViewModel {
         scanProgress = 0.1
         currentPhase = "Detecting duplicates — 0/\(fetched.count)"
 
-        let detector = DuplicateDetector(threshold: 5)
-        duplicateGroups = await detector.scan(items: fetched) { [weak self] value in
+        let detector = SimilarityClustering(distanceThreshold: 0.5)
+        let dupResult = await detector.cluster(fetched) { [weak self] value in
             Task { @MainActor in
                 guard let self else { return }
                 self.scanProgress = 0.1 + value * 0.55
@@ -47,6 +50,8 @@ final class PhotosViewModel {
                 self.currentPhase = "Detecting duplicates — \(done)/\(fetched.count)"
             }
         }
+        duplicateGroups = dupResult.clusters
+        unanalyzedCount = dupResult.failedIDs.count
 
         currentPhase = "Checking for blur — 0/\(fetched.count)"
         blurryPhotos = await BlurDetector.scan(items: fetched, threshold: 0.002) { [weak self] value in
@@ -74,10 +79,15 @@ final class PhotosViewModel {
             blurryPhotos.removeAll { deletedIDs.contains($0.0.asset.localIdentifier) }
             largeMedia.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
             duplicateGroups = duplicateGroups
-                .map { group -> DuplicateDetector.Group in
-                    var copy = group
-                    copy.items.removeAll { deletedIDs.contains($0.asset.localIdentifier) }
-                    return copy
+                .map { group in
+                    let survivors = group.items.filter { !deletedIDs.contains($0.asset.localIdentifier) }
+                    // Preserve the chosen best-shot keeper if it survived; only let
+                    // the Cluster re-derive one when the keeper itself was deleted.
+                    let keeperID = SimilarityClustering.preservedKeeperID(
+                        current: group.keeperID,
+                        survivingIDs: Set(survivors.map(\.id))
+                    )
+                    return SimilarityClustering.Cluster(items: survivors, keeperID: keeperID)
                 }
                 .filter { $0.items.count > 1 }   // drop groups that no longer have duplicates
         } catch {
@@ -102,13 +112,13 @@ struct PhotosCleanerView: View {
             if ids.insert(a.localIdentifier).inserted { out.append(a) }
         }
         for group in model.duplicateGroups {
-            // Drop the largest, keep the others as deletion candidates.
-            let sorted = group.items.sorted { $0.sizeBytes > $1.sizeBytes }
-            for copy in sorted.dropFirst() { add(copy.asset) }
+            // Keep the best shot; the rest are deletion candidates.
+            for copy in group.deletable { add(copy.asset) }
         }
-        model.screenshots.forEach { add($0.asset) }
-        model.screenRecordings.forEach { add($0.asset) }
-        model.blurryPhotos.forEach { add($0.0.asset) }
+        // Never bulk-delete favorites or edited photos, in any category.
+        model.screenshots.forEach { if !$0.isProtected { add($0.asset) } }
+        model.screenRecordings.forEach { if !$0.isProtected { add($0.asset) } }
+        model.blurryPhotos.forEach { if !$0.0.isProtected { add($0.0.asset) } }
         return out
     }
 
@@ -199,7 +209,7 @@ struct PhotosCleanerView: View {
                 Section("Reclaim") {
                     summaryRow(
                         .duplicates,
-                        itemCount: model.duplicateGroups.reduce(0) { $0 + $1.items.count - 1 },
+                        itemCount: model.duplicateGroups.reduce(0) { $0 + $1.deletable.count },
                         reclaimable: model.duplicateGroups.reduce(0) { $0 + $1.reclaimableBytes }
                     )
                     summaryRow(.screenshots, itemCount: model.screenshots.count,
@@ -210,6 +220,11 @@ struct PhotosCleanerView: View {
                                reclaimable: totalBytes(model.blurryPhotos.map(\.0)))
                     summaryRow(.large, itemCount: model.largeMedia.count,
                                reclaimable: totalBytes(model.largeMedia))
+                    if model.unanalyzedCount > 0 {
+                        Text("^[\(model.unanalyzedCount) photo](inflect: true) couldn't be analyzed (still in iCloud). Re-run with Wi-Fi to include them.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section {
@@ -312,9 +327,9 @@ struct PhotosCleanerView: View {
 }
 
 /// A sheet that shows duplicate groups and lets the user delete all but the
-/// largest copy. Uses a confirmation dialog for the destructive action.
+/// best shot. Uses a confirmation dialog for the destructive action.
 struct DuplicateGroupsView: View {
-    let groups: [DuplicateDetector.Group]
+    let groups: [SimilarityClustering.Cluster]
     let onDelete: ([PHAsset]) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -328,10 +343,7 @@ struct DuplicateGroupsView: View {
                         AssetThumbnailRow(item: item)
                     }
                     Button(role: .destructive) {
-                        let keeper = group.items.max { $0.sizeBytes < $1.sizeBytes }?.id
-                        pendingDeletion = group.items
-                            .filter { $0.id != keeper }
-                            .map(\.asset)
+                        pendingDeletion = group.deletable.map(\.asset)
                     } label: {
                         Label("Delete Copies", systemImage: "trash")
                     }
@@ -357,7 +369,7 @@ struct DuplicateGroupsView: View {
                 }
                 Button("Cancel", role: .cancel) { pendingDeletion = nil }
             } message: { _ in
-                Text("The largest copy is kept. Deleted items move to the Recently Deleted album for 30 days.")
+                Text("The best shot is kept. Deleted items move to the Recently Deleted album for 30 days.")
             }
         }
     }

@@ -13,9 +13,28 @@ struct PhotoItem: Identifiable, Hashable {
     let mediaSubtypes: PHAssetMediaSubtype
     let isVideo: Bool
     let duration: TimeInterval
+    let isFavorite: Bool
+    let isEdited: Bool
+
+    // Explicit init so `isFavorite`/`isEdited` can default to false — keeps existing
+    // call sites and test fixtures (which predate these fields) compiling.
+    init(
+        id: String, asset: PHAsset, pixelWidth: Int, pixelHeight: Int,
+        creationDate: Date?, sizeBytes: Int64, mediaSubtypes: PHAssetMediaSubtype,
+        isVideo: Bool, duration: TimeInterval,
+        isFavorite: Bool = false, isEdited: Bool = false
+    ) {
+        self.id = id; self.asset = asset
+        self.pixelWidth = pixelWidth; self.pixelHeight = pixelHeight
+        self.creationDate = creationDate; self.sizeBytes = sizeBytes
+        self.mediaSubtypes = mediaSubtypes; self.isVideo = isVideo; self.duration = duration
+        self.isFavorite = isFavorite; self.isEdited = isEdited
+    }
 
     var isScreenshot: Bool { mediaSubtypes.contains(.photoScreenshot) }
     var isBurst: Bool { asset.representsBurst }
+    /// Favorite or edited photos must never be offered for auto-deletion.
+    var isProtected: Bool { isFavorite || isEdited }
 
     static func == (lhs: PhotoItem, rhs: PhotoItem) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
@@ -46,7 +65,9 @@ enum PhotoScanner {
                 sizeBytes: asset.estimatedSize,
                 mediaSubtypes: asset.mediaSubtypes,
                 isVideo: asset.mediaType == .video,
-                duration: asset.duration
+                duration: asset.duration,
+                isFavorite: asset.isFavorite,
+                isEdited: asset.hasEdits
             ))
         }
         return items
@@ -62,6 +83,13 @@ enum PhotoScanner {
 }
 
 extension PHAsset {
+    /// True if the user has edited this asset. Detected by the presence of an
+    /// `.adjustmentData` resource — free to query, no editing session needed.
+    /// Edited photos are protected from auto-deletion.
+    var hasEdits: Bool {
+        PHAssetResource.assetResources(for: self).contains { $0.type == .adjustmentData }
+    }
+
     /// Best-effort size estimate without downloading originals.
     /// Uses PHAssetResource which is free to query.
     var estimatedSize: Int64 {
