@@ -115,9 +115,10 @@ struct PhotosCleanerView: View {
             // Keep the best shot; the rest are deletion candidates.
             for copy in group.deletable { add(copy.asset) }
         }
-        model.screenshots.forEach { add($0.asset) }
-        model.screenRecordings.forEach { add($0.asset) }
-        model.blurryPhotos.forEach { add($0.0.asset) }
+        // Never bulk-delete favorites or edited photos, in any category.
+        model.screenshots.forEach { if !$0.isProtected { add($0.asset) } }
+        model.screenRecordings.forEach { if !$0.isProtected { add($0.asset) } }
+        model.blurryPhotos.forEach { if !$0.0.isProtected { add($0.asset) } }
         return out
     }
 
