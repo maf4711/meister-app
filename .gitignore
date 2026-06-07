@@ -32,3 +32,6 @@ __pycache__/
 
 # Git worktrees
 .worktrees/
+
+# iOS test derivedData (this work)
+.build-sim/
