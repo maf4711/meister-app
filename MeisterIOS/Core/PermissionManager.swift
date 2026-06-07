@@ -43,9 +43,9 @@ final class PermissionManager {
 
     var calendarGateState: PermissionState {
         switch calendarStatus {
-        case .fullAccess, .writeOnly, .authorized: return .granted
-        case .denied, .restricted:                 return .denied
-        default:                                   return .notDetermined
+        case .fullAccess, .writeOnly: return .granted
+        case .denied, .restricted:    return .denied
+        default:                      return .notDetermined
         }
     }
 
