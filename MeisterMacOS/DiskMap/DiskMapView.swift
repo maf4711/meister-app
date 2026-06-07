@@ -293,7 +293,7 @@ struct DiskMapView: View {
             let cross = CGFloat(stripBytes / max(1, remainingBytes)) * crossSize
 
             // Lay out within strip
-            var inner = useVertical
+            let inner = useVertical
                 ? CGRect(x: cursor.minX, y: cursor.minY, width: cursor.width, height: cross)
                 : CGRect(x: cursor.minX, y: cursor.minY, width: cross, height: cursor.height)
             let stripCursor = inner

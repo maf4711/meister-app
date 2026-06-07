@@ -235,7 +235,7 @@ struct CodeSignatureView: View {
             switch s {
             case .valid:    return ("Gültig", MD4.SemColor.success, "checkmark.seal.fill")
             case .unsigned: return ("Unsigniert", MD4.SemColor.warning, "exclamationmark.triangle.fill")
-            case .invalid(let m): return ("Ungültig", MD4.SemColor.error, "xmark.seal.fill")
+            case .invalid: return ("Ungültig", MD4.SemColor.error, "xmark.seal.fill")
             case .error:    return ("Fehler", MD4.SemColor.textTertiary, "questionmark.circle")
             }
         }()

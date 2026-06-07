@@ -1,7 +1,7 @@
 import Contacts
 import Photos
 import UIKit
-import Vision
+@preconcurrency import Vision
 
 /// Matches the user's contacts to unlabelled faces found in the photo library.
 /// Uses Vision (VNDetectFaceRectanglesRequest) for detection and

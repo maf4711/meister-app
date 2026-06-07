@@ -48,7 +48,8 @@ struct IOSDeviceSnapshot: Equatable {
 actor IOSDeviceReader {
     func read() async -> IOSDeviceSnapshot {
         let device = await MainActor.run { UIDevice.current }
-        let runtime = detectRuntimeKind()
+        let idiom = await MainActor.run { device.userInterfaceIdiom }
+        let runtime = detectRuntimeKind(idiom: idiom)
         let modelName: String
         let osName: String
         let osVersion: String
@@ -137,12 +138,12 @@ actor IOSDeviceReader {
         return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
     }
 
-    private nonisolated func detectRuntimeKind() -> IOSDeviceSnapshot.RuntimeKind {
+    private nonisolated func detectRuntimeKind(idiom: UIUserInterfaceIdiom) -> IOSDeviceSnapshot.RuntimeKind {
         // ProcessInfo flags are the source of truth on iOS 14+ / macOS 11+.
         if ProcessInfo.processInfo.isiOSAppOnMac { return .iOSAppOnMac }
         if ProcessInfo.processInfo.isMacCatalystApp { return .macCatalyst }
-        // Fall back to UIDevice's idiom for native iOS.
-        let idiom = UIDevice.current.userInterfaceIdiom
+        // Fall back to UIDevice's idiom for native iOS. Read on the main actor by
+        // the caller and passed in — UIDevice.current is main-actor-isolated.
         return idiom == .pad ? .iPad : .iPhone
     }
 

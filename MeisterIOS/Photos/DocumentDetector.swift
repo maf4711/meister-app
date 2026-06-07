@@ -1,6 +1,6 @@
 import Photos
 import UIKit
-import Vision
+@preconcurrency import Vision
 
 /// Detects photos that are documents / receipts / whiteboards rather than memories.
 /// Heuristic: text density above a threshold + strong rectangular frame.
