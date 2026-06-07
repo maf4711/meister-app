@@ -1,6 +1,6 @@
 import Photos
 import UIKit
-import Vision
+@preconcurrency import Vision
 
 /// Picks the best shot from a set of near-duplicates using a simple quality proxy:
 /// sharpness (Laplacian variance) + face quality from Vision when faces are present.

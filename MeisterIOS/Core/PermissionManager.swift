@@ -20,7 +20,9 @@ final class PermissionManager {
     var isPhotosAuthorized: Bool { photosStatus == .authorized || photosStatus == .limited }
     var isContactsAuthorized: Bool { contactsStatus == .authorized }
     var isCalendarAuthorized: Bool {
-        calendarStatus == .fullAccess || calendarStatus == .writeOnly || calendarStatus == .authorized
+        // iOS 17+ only returns .fullAccess / .writeOnly; the legacy .authorized
+        // case is deprecated and never produced at our deployment target.
+        calendarStatus == .fullAccess || calendarStatus == .writeOnly
     }
 
     var photosGateState: PermissionState {
@@ -41,9 +43,9 @@ final class PermissionManager {
 
     var calendarGateState: PermissionState {
         switch calendarStatus {
-        case .fullAccess, .writeOnly, .authorized: return .granted
-        case .denied, .restricted:                 return .denied
-        default:                                   return .notDetermined
+        case .fullAccess, .writeOnly: return .granted
+        case .denied, .restricted:    return .denied
+        default:                      return .notDetermined
         }
     }
 

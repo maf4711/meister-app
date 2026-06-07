@@ -59,8 +59,10 @@ struct AuroraCard<Content: View>: View {
             .blendMode(.plusLighter)
             .onAppear {
                 guard !reduceMotion else { return }
-                withAnimation(.linear(duration: 8.0).repeatForever(autoreverses: false)) {
-                    auroraAngle = 360
+                DispatchQueue.main.async {
+                    withAnimation(.linear(duration: 8.0).repeatForever(autoreverses: false)) {
+                        auroraAngle = 360
+                    }
                 }
             }
     }

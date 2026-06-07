@@ -50,8 +50,10 @@ struct NumberFlow: View {
                 if reduceMotion {
                     displayed = value
                 } else {
-                    withAnimation(.timingCurve(0.16, 1.0, 0.30, 1.0, duration: duration)) {
-                        displayed = value
+                    DispatchQueue.main.async {
+                        withAnimation(.timingCurve(0.16, 1.0, 0.30, 1.0, duration: duration)) {
+                            displayed = value
+                        }
                     }
                 }
             }
@@ -59,8 +61,10 @@ struct NumberFlow: View {
                 if reduceMotion {
                     displayed = newValue
                 } else {
-                    withAnimation(.snappy(duration: 0.5)) {
-                        displayed = newValue
+                    DispatchQueue.main.async {
+                        withAnimation(.snappy(duration: 0.5)) {
+                            displayed = newValue
+                        }
                     }
                 }
             }

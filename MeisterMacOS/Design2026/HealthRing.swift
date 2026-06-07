@@ -79,15 +79,19 @@ struct HealthRing: View {
             if reduceMotion {
                 animatedProgress = progress
             } else {
-                withAnimation(.timingCurve(0.16, 1.0, 0.30, 1.0, duration: 1.4)) {
-                    animatedProgress = progress
+                DispatchQueue.main.async {
+                    withAnimation(.timingCurve(0.16, 1.0, 0.30, 1.0, duration: 1.4)) {
+                        animatedProgress = progress
+                    }
                 }
             }
             if !reduceMotion && isComputing { startShimmer() }
         }
         .onChange(of: progress) { _, new in
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.78)) {
-                animatedProgress = new
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.78)) {
+                    animatedProgress = new
+                }
             }
         }
         .onChange(of: isComputing) { _, computing in
@@ -96,8 +100,10 @@ struct HealthRing: View {
     }
 
     private func startShimmer() {
-        withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
-            shimmerAngle = 360
+        DispatchQueue.main.async {
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                shimmerAngle = 360
+            }
         }
     }
 }

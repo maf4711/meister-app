@@ -1,7 +1,7 @@
 import CoreImage
 import Photos
 import UIKit
-import Vision
+@preconcurrency import Vision
 
 /// Finds visually similar photos using Vision's `VNFeaturePrintObservation` — far smarter
 /// than pHash: works across crops, rotations, lighting changes.
