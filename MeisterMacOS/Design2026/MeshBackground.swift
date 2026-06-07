@@ -51,8 +51,10 @@ struct MeshBackground: View {
         )
         .onAppear {
             guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 24).repeatForever(autoreverses: true)) {
-                t = .pi * 2
+            DispatchQueue.main.async {
+                withAnimation(.linear(duration: 24).repeatForever(autoreverses: true)) {
+                    t = .pi * 2
+                }
             }
         }
     }
