@@ -59,7 +59,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "autopilot",       title: "Autopilot",           symbol: "clock.arrow.2.circlepath",  group: .storage,      command: []), // native Swift, scheduler
         .init(id: "storage-forecast", title: "Storage Forecast",   symbol: "chart.line.uptrend.xyaxis", group: .storage,      command: []), // native Swift
         .init(id: "extended-attributes", title: "Extended Attrs",  symbol: "doc.badge.gearshape",       group: .storage,      command: []), // native Swift
-        .init(id: "symlink-inspector", title: "Symlink Inspector", symbol: "link.badge.exclamationmark", group: .storage,     command: []), // native Swift
+        .init(id: "symlink-inspector", title: "Symlink Inspector", symbol: "link", group: .storage,     command: []), // native Swift
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
         .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
         .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
