@@ -4,6 +4,7 @@ xcuserdata/
 DerivedData/
 *.xcuserstate
 build/
+.build-sim/
 
 # Swift Package Manager
 # Build artifacts only — source trees under Packages/ (e.g. MeisterKit) must be tracked
