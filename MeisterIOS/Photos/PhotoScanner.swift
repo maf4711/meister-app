@@ -45,30 +45,55 @@ enum PhotoScanner {
     /// in under 20 s; raise/lower via the `limit` parameter for power users.
     static let defaultLimit = 500
 
+    /// Pixel-based size so fetchAll never touches PHAssetResource (that blocked
+    /// TF "Scan funktioniert nicht" on "Reading library" for iCloud libraries).
+    static func estimateBytes(
+        pixelWidth: Int, pixelHeight: Int, isVideo: Bool, duration: TimeInterval
+    ) -> Int64 {
+        if isVideo {
+            return Int64(max(duration, 1) * 1_500_000)
+        }
+        let pixels = Int64(max(pixelWidth, 1)) * Int64(max(pixelHeight, 1))
+        return pixels * 3 / 4
+    }
+
     /// Fetch up to `limit` assets (photos + videos) the user has authorized, most recent first.
-    /// Lightweight: does not download iCloud originals, just reads asset metadata.
-    static func fetchAll(limit: Int = defaultLimit) -> [PhotoItem] {
+    /// Lightweight: PHAsset fields only — no iCloud resource queries.
+    static func fetchAll(
+        limit: Int = defaultLimit,
+        progress: ((Int, Int) -> Void)? = nil
+    ) -> [PhotoItem] {
         let opts = PHFetchOptions()
         opts.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         opts.includeHiddenAssets = false
         opts.fetchLimit = limit
         let result = PHAsset.fetchAssets(with: opts)
+        let total = result.count
         var items: [PhotoItem] = []
-        items.reserveCapacity(result.count)
-        result.enumerateObjects { asset, _, _ in
+        items.reserveCapacity(total)
+        result.enumerateObjects { asset, idx, _ in
+            let isVideo = asset.mediaType == .video
             items.append(PhotoItem(
                 id: asset.localIdentifier,
                 asset: asset,
                 pixelWidth: asset.pixelWidth,
                 pixelHeight: asset.pixelHeight,
                 creationDate: asset.creationDate,
-                sizeBytes: asset.estimatedSize,
+                sizeBytes: estimateBytes(
+                    pixelWidth: asset.pixelWidth,
+                    pixelHeight: asset.pixelHeight,
+                    isVideo: isVideo,
+                    duration: asset.duration
+                ),
                 mediaSubtypes: asset.mediaSubtypes,
-                isVideo: asset.mediaType == .video,
+                isVideo: isVideo,
                 duration: asset.duration,
                 isFavorite: asset.isFavorite,
-                isEdited: asset.hasEdits
+                isEdited: false
             ))
+            if idx == 0 || idx == total - 1 || idx % 25 == 0 {
+                progress?(idx + 1, total)
+            }
         }
         return items
     }

@@ -13,7 +13,7 @@ enum PhotoThumbnailLoader {
         await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
             let options = PHImageRequestOptions()
             options.resizeMode = .fast
-            options.deliveryMode = .highQualityFormat
+            options.deliveryMode = .fastFormat
             options.isNetworkAccessAllowed = false
             options.isSynchronous = false
 
@@ -47,9 +47,11 @@ enum PhotoThumbnailLoader {
         }
 
         func resume(with image: UIImage?) {
-            lock.lock(); defer { lock.unlock() }
-            guard !resumed else { return }
+            lock.lock()
+            let already = resumed
             resumed = true
+            lock.unlock()
+            guard !already else { return }
             continuation.resume(returning: image)
         }
     }

@@ -29,7 +29,9 @@ final class PhotosViewModel {
         defer { isScanning = false }
 
         currentPhase = "Reading library"
-        let fetched = await Task.detached(priority: .userInitiated) { PhotoScanner.fetchAll() }.value
+        let fetched = await Task.detached(priority: .userInitiated) {
+            PhotoScanner.fetchAll()
+        }.value
         library = fetched
         currentPhase = "Reading library — \(fetched.count) items"
         scanProgress = 0.05
@@ -41,7 +43,7 @@ final class PhotosViewModel {
         scanProgress = 0.1
         currentPhase = "Detecting duplicates — 0/\(fetched.count)"
 
-        let detector = SimilarityClustering(distanceThreshold: 0.5)
+        let detector = SimilarityClustering()
         let dupResult = await detector.cluster(fetched) { [weak self] value in
             Task { @MainActor in
                 guard let self else { return }
