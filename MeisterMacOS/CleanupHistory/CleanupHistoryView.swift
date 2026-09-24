@@ -15,6 +15,7 @@ final class CleanupHistoryModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.entries = await reader.load()

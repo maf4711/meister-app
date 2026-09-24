@@ -13,9 +13,19 @@ struct SystemUpdate: Identifiable, Hashable {
 }
 
 actor SystemUpdatesReader {
-    func read() async -> [SystemUpdate] {
-        let raw = run("/usr/sbin/softwareupdate", ["--list"])
-        return parse(raw)
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<[SystemUpdate]> {
+        let result = command("/usr/sbin/softwareupdate", ["--list"])
+        if let issue = result.issue(source: "macOS-Updates") { return .init(value: nil, issues: [issue]) }
+        let updates = parse(result.output)
+        guard !updates.isEmpty || result.output.contains("No new software available") else {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "macOS-Updates")])
+        }
+        return .init(value: updates)
     }
 
     nonisolated func parse(_ raw: String) -> [SystemUpdate] {
@@ -54,6 +64,9 @@ actor SystemUpdatesReader {
                 }
             }
         }
+        if let label = pendingLabel {
+            out.append(SystemUpdate(id: label, label: label, title: label, version: nil, sizeBytes: nil, isRecommended: false, requiresRestart: false))
+        }
         return out
     }
 
@@ -78,32 +91,28 @@ actor SystemUpdatesReader {
         return nil
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
 final class SystemUpdatesModel: ObservableObject {
     @Published var updates: [SystemUpdate] = []
     @Published var isLoading = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     private let reader = SystemUpdatesReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.updates = await reader.read()
+        let report = await reader.read()
+        updates = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 
     func copyInstallCommand(for label: String) {
-        let cmd = "sudo softwareupdate --install \"\(label)\" --restart"
+        let cmd = "sudo softwareupdate --install \(CommandRunner.shellQuote(label)) --restart"
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(cmd, forType: .string)
@@ -118,6 +127,7 @@ struct SystemUpdatesView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -150,6 +160,8 @@ struct SystemUpdatesView: View {
     private var content: some View {
         if model.isLoading && model.updates.isEmpty {
             ProgressView("Frage Apple-Server…").frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if !model.issues.isEmpty {
+            ContentUnavailableView("Update-Status unbekannt", systemImage: "arrow.triangle.2.circlepath")
         } else if model.updates.isEmpty {
             ContentUnavailableView("Keine Updates verfügbar",
                                    systemImage: "checkmark.circle.fill",

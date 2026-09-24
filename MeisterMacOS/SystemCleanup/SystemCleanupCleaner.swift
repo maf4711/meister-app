@@ -12,6 +12,7 @@ struct CleanupManifest: Codable {
         let bytes: Int64
         let recycled: Bool
         let error: String?
+        var trashPath: String? = nil
     }
 }
 
@@ -45,7 +46,11 @@ final class SystemCleanupCleaner {
         var entries: [CleanupManifest.Entry] = []
         var total: Int64 = 0
 
-        for category in categories {
+        // Verify journal storage before modifying files; persist progress after each operation.
+        let timestamp = Date()
+        let manifestID = UUID().uuidString
+        try writeManifest(.init(timestamp: timestamp, entries: [], totalReclaimedBytes: 0), id: manifestID)
+        for category in categories.sorted(by: { $0 == .trash && $1 != .trash || ($0 != .trash && $1 != .trash && $0.rawValue < $1.rawValue) }) {
             for root in category.paths(home: home) {
                 guard fileManager.fileExists(atPath: root.path) else { continue }
 
@@ -67,40 +72,45 @@ final class SystemCleanupCleaner {
                                                  recycled: false,
                                                  error: error.localizedDescription))
                         }
+                        try writeManifest(.init(timestamp: timestamp, entries: entries, totalReclaimedBytes: total), id: manifestID)
                     }
                     continue
                 }
 
                 if category.preserveContainer {
                     for item in directoryItems(at: root) {
+                        if category == .userCaches && SystemCleanupCategory.allCases.filter({ $0 != .userCaches })
+                            .flatMap({ $0.paths(home: home) }).contains(where: { $0.standardizedFileURL == item.standardizedFileURL }) { continue }
                         let bytes = sizeOf(item)
-                        let (ok, err) = await recycle(item)
+                        let (ok, err, trashPath) = await recycle(item)
                         if ok { total += bytes }
                         entries.append(.init(category: category.rawValue,
                                              path: item.path,
                                              bytes: bytes,
                                              recycled: ok,
-                                             error: err))
+                                             error: err, trashPath: trashPath))
+                        try writeManifest(.init(timestamp: timestamp, entries: entries, totalReclaimedBytes: total), id: manifestID)
                     }
                 } else {
                     let bytes = sizeOf(root)
-                    let (ok, err) = await recycle(root)
+                    let (ok, err, trashPath) = await recycle(root)
                     if ok { total += bytes }
                     entries.append(.init(category: category.rawValue,
                                          path: root.path,
                                          bytes: bytes,
                                          recycled: ok,
-                                         error: err))
+                                         error: err, trashPath: trashPath))
+                    try writeManifest(.init(timestamp: timestamp, entries: entries, totalReclaimedBytes: total), id: manifestID)
                 }
             }
         }
 
         let manifest = CleanupManifest(
-            timestamp: Date(),
+            timestamp: timestamp,
             entries: entries,
             totalReclaimedBytes: total
         )
-        try writeManifest(manifest)
+        try writeManifest(manifest, id: manifestID)
         return manifest
     }
 
@@ -133,19 +143,19 @@ final class SystemCleanupCleaner {
         return total
     }
 
-    private func recycle(_ url: URL) async -> (Bool, String?) {
+    private func recycle(_ url: URL) async -> (Bool, String?, String?) {
         await withCheckedContinuation { cont in
-            NSWorkspace.shared.recycle([url]) { _, error in
+            NSWorkspace.shared.recycle([url]) { mapping, error in
                 if let error = error {
-                    cont.resume(returning: (false, error.localizedDescription))
+                    cont.resume(returning: (false, error.localizedDescription, nil))
                 } else {
-                    cont.resume(returning: (true, nil))
+                    cont.resume(returning: (true, nil, mapping[url]?.path))
                 }
             }
         }
     }
 
-    private func writeManifest(_ manifest: CleanupManifest) throws {
+    private func writeManifest(_ manifest: CleanupManifest, id: String) throws {
         let support = home
             .appendingPathComponent("Library/Application Support/Meister/cleanups", isDirectory: true)
         try fileManager.createDirectory(at: support, withIntermediateDirectories: true)
@@ -153,7 +163,7 @@ final class SystemCleanupCleaner {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
         let stamp = formatter.string(from: manifest.timestamp).replacingOccurrences(of: ":", with: "-")
-        let url = support.appendingPathComponent("\(stamp).json")
+        let url = support.appendingPathComponent("\(stamp)-\(id).json")
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

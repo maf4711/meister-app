@@ -7,6 +7,7 @@ final class DuplicatesModel: ObservableObject {
     @Published var groups: [DuplicateGroup] = []
     @Published var keep: [String: URL] = [:]   // group hash → URL the user wants to keep
     @Published var isScanning = false
+    @Published var isCleaning = false
     @Published var scanRoots: [URL] = [
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"),
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads"),
@@ -49,9 +50,21 @@ final class DuplicatesModel: ObservableObject {
     }
 
     func recycleLosers() async {
+        guard !isCleaning, !isScanning else { return }
+        isCleaning = true
+        errorMessage = nil
+        defer { isCleaning = false }
         var reclaimed: Int64 = 0
         for g in groups {
             guard let keepURL = keep[g.hash] else { continue }
+            let validated = await Task.detached {
+                g.files.contains(keepURL) && DuplicateFinder.sha256(of: keepURL) == g.hash &&
+                g.files.allSatisfy { DuplicateFinder.sha256(of: $0) == g.hash }
+            }.value
+            guard validated else {
+                errorMessage = "Dateien wurden seit dem Scan verändert oder entfernt. Bitte neu scannen."
+                continue
+            }
             let losers = g.files.filter { $0 != keepURL }
             let result: (Bool, NSError?) = await withCheckedContinuation { cont in
                 NSWorkspace.shared.recycle(losers) { _, err in

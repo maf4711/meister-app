@@ -9,10 +9,17 @@ struct EnergyHog: Identifiable, Hashable {
 }
 
 actor EnergyImpactReader {
-    /// Sample `top -l 1 -stats pid,command,cpu,power` and parse top energy users.
-    func read() async -> [EnergyHog] {
-        let raw = run("/usr/bin/top", ["-l", "1", "-stats", "pid,command,cpu,power", "-n", "20", "-o", "power"])
-        return parse(raw)
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<[EnergyHog]> {
+        let result = command("/usr/bin/top", ["-l", "1", "-stats", "pid,command,cpu,power", "-n", "20", "-o", "power"])
+        if let issue = result.issue(source: "Energieverbrauch") { return .init(value: nil, issues: [issue]) }
+        let rows = parse(result.output)
+        guard !rows.isEmpty else { return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Energieverbrauch")]) }
+        return .init(value: rows)
     }
 
     nonisolated func parse(_ raw: String) -> [EnergyHog] {
@@ -27,7 +34,8 @@ actor EnergyImpactReader {
             guard parts.count >= 4,
                   let pid = Int(parts[0]),
                   let cpu = Double(parts[parts.count - 2]),
-                  let power = Double(parts[parts.count - 1]) else { continue }
+                  let power = Double(parts[parts.count - 1]),
+                  pid > 0, cpu.isFinite, cpu >= 0, power.isFinite, power >= 0 else { continue }
             // Command may contain spaces — rejoin everything between PID and last 2 columns.
             let cmd = parts[1..<(parts.count - 2)].joined(separator: " ")
             out.append(EnergyHog(id: pid, name: cmd, energyImpact: power, cpuPercent: cpu))
@@ -35,41 +43,41 @@ actor EnergyImpactReader {
         return out.sorted { $0.energyImpact > $1.energyImpact }
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
 final class EnergyImpactModel: ObservableObject {
     @Published var hogs: [EnergyHog] = []
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var isLoading = false
     private let reader = EnergyImpactReader()
-    private var timer: Timer?
+    private var refreshTask: Task<Void, Never>?
 
     func start() {
-        Task { await refresh() }
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.refresh() }
+        stop()
+        refreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.refresh()
+                do { try await Task.sleep(for: .seconds(5)) } catch { return }
+            }
         }
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        refreshTask?.cancel()
+        refreshTask = nil
     }
 
     func refresh() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.hogs = await reader.read()
+        let report = await reader.read()
+        guard !Task.isCancelled else { return }
+        self.hogs = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 }
 
@@ -79,6 +87,7 @@ struct EnergyImpactView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             Divider().background(MD4.SemColor.divider)
             list
         }

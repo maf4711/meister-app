@@ -10,6 +10,7 @@ final class HostsModel: ObservableObject {
     private let reader = HostsReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         let (e, r) = await reader.read()

@@ -11,15 +11,26 @@ struct BluetoothDevice: Identifiable, Hashable {
 }
 
 actor BluetoothDevicesReader {
-    func read() async -> [BluetoothDevice] {
-        let raw = run("/usr/sbin/system_profiler", ["-json", "SPBluetoothDataType"])
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<[BluetoothDevice]> {
+        let result = command("/usr/sbin/system_profiler", ["-json", "SPBluetoothDataType"])
+        if let issue = result.issue(source: "Bluetooth") { return .init(value: nil, issues: [issue]) }
+        let raw = result.output
         guard let data = raw.data(using: .utf8),
               let any = try? JSONSerialization.jsonObject(with: data),
               let dict = any as? [String: Any],
-              let bt = dict["SPBluetoothDataType"] as? [[String: Any]] else { return [] }
+              let bt = dict["SPBluetoothDataType"] as? [[String: Any]], !bt.isEmpty else { return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Bluetooth")]) }
 
+        var issues: [DiagnosticIssue] = []
         var out: [BluetoothDevice] = []
         for top in bt {
+            for key in ["device_connected", "device_not_connected"] where top[key] != nil {
+                if !(top[key] is [[String: [String: Any]]]) { issues.append(.init(kind: .invalidOutput, source: "Bluetooth")) }
+            }
             // Two top-level shapes: connected vs not_connected
             if let connected = top["device_connected"] as? [[String: [String: Any]]] {
                 for entry in connected { out.append(contentsOf: parseDeviceMap(entry, connected: true)) }
@@ -28,7 +39,8 @@ actor BluetoothDevicesReader {
                 for entry in notConnected { out.append(contentsOf: parseDeviceMap(entry, connected: false)) }
             }
         }
-        return out.sorted { $0.connected && !$1.connected }
+        var seen = Set<String>()
+        return .init(value: out.sorted { $0.connected && !$1.connected }.filter { seen.insert($0.id).inserted }, issues: issues)
     }
 
     private nonisolated func parseDeviceMap(_ map: [String: [String: Any]], connected: Bool) -> [BluetoothDevice] {
@@ -38,38 +50,34 @@ actor BluetoothDevicesReader {
                 .flatMap { $0.hasSuffix("%") ? Int($0.dropLast()) : Int($0) }
             let kind = attrs["device_minorType"] as? String ?? attrs["device_majorType"] as? String
             return BluetoothDevice(
-                id: address,
+                id: address == "—" ? "name:\(name)" : address.lowercased(),
                 name: name,
                 address: address,
                 connected: connected,
-                batteryPercent: battery,
+                batteryPercent: battery.flatMap { (0...100).contains($0) ? $0 : nil },
                 kind: kind
             )
         }
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
 final class BluetoothDevicesModel: ObservableObject {
     @Published var devices: [BluetoothDevice] = []
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var isLoading = false
     private let reader = BluetoothDevicesReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.devices = await reader.read()
+        let report = await reader.read()
+        self.devices = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 }
 
@@ -79,6 +87,7 @@ struct BluetoothDevicesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             Divider().background(MD4.SemColor.divider)
             content
         }
@@ -110,7 +119,7 @@ struct BluetoothDevicesView: View {
         if model.isLoading && model.devices.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.devices.isEmpty {
-            ContentUnavailableView("Keine Bluetooth-Geräte gepairt",
+            ContentUnavailableView(model.issues.isEmpty ? "Keine Bluetooth-Geräte gemeldet" : "Bluetooth-Diagnose unvollständig",
                                    systemImage: "antenna.radiowaves.left.and.right.slash")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

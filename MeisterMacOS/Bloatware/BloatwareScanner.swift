@@ -162,21 +162,9 @@ struct BloatwareScanner: Sendable {
             FileManager.default.isExecutableFile(atPath: $0)
         }
         guard let brew else { return [] }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: brew)
-        p.arguments = ["list", "--cask"]
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = Pipe()
-        do {
-            try p.run()
-            p.waitUntilExit()
-        } catch {
-            return []
-        }
-        let data = out.fileHandleForReading.readDataToEndOfFile()
-        guard let text = String(data: data, encoding: .utf8) else { return [] }
-        return text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+        let result = CommandRunner.run(brew, ["list", "--cask"])
+        guard result.succeeded else { return [] }
+        return result.output.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
     }
 
     // MARK: - Application Support leftovers
@@ -246,25 +234,9 @@ struct BloatwareScanner: Sendable {
     }
 
     private static func readLoginItems() -> [String] {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        p.arguments = ["-e", "tell application \"System Events\" to get the name of every login item"]
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = Pipe()
-        do {
-            try p.run()
-            p.waitUntilExit()
-        } catch {
-            return []
-        }
-        let data = out.fileHandleForReading.readDataToEndOfFile()
-        guard let text = String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !text.isEmpty else { return [] }
-        return text.split(separator: ",").map {
-            $0.trimmingCharacters(in: .whitespaces)
-        }.filter { !$0.isEmpty }
+        let result = CommandRunner.run("/usr/bin/osascript", ["-e", "tell application \"System Events\" to get the name of every login item"])
+        guard result.succeeded else { return [] }
+        return result.output.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
     }
 
     // MARK: - size

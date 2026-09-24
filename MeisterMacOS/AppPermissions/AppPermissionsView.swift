@@ -60,18 +60,24 @@ enum TCCService: String, CaseIterable, Identifiable {
 }
 
 actor AppPermissionsReader {
-    /// TCC.db lives at ~/Library/Application Support/com.apple.TCC/TCC.db (user)
-    /// and /Library/Application Support/com.apple.TCC/TCC.db (system).
-    /// Reading requires Full Disk Access entitlement on macOS 14+.
-    /// Without FDA, sqlite3 returns "unable to open database file".
-    func read() async -> (granted: Bool, items: [AppPermission]) {
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    /// Inspect only the user's TCC database, read-only. Missing access is not an empty audit.
+    func read() async -> DiagnosticReport<[AppPermission]> {
         let userDB = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/com.apple.TCC/TCC.db")
-        let raw = run("/usr/bin/sqlite3", [userDB.path, "SELECT service, client, auth_value FROM access;"])
-        if raw.isEmpty || raw.lowercased().contains("unable to open") {
-            return (false, [])
+        let result = command("/usr/bin/sqlite3", ["-readonly", userDB.path, "SELECT service, client, auth_value FROM access;"])
+        if let issue = result.issue(source: "App-Berechtigungen") { return .init(value: nil, issues: [issue]) }
+        let malformed = result.output.split(separator: "\n").contains { line in
+            let fields = line.split(separator: "|", omittingEmptySubsequences: false)
+            return fields.count != 3 || Int(fields.last ?? "") == nil
         }
-        return (true, parse(raw))
+        let values = parse(result.output)
+        return .init(value: malformed && values.isEmpty ? nil : values,
+                     issues: malformed ? [.init(kind: .invalidOutput, source: "App-Berechtigungen")] : [])
     }
 
     nonisolated func parse(_ raw: String) -> [AppPermission] {
@@ -100,22 +106,12 @@ actor AppPermissionsReader {
         }
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        let stdout = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return stdout
-    }
 }
 
 @MainActor
 final class AppPermissionsModel: ObservableObject {
-    @Published var granted = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var items: [AppPermission] = []
     @Published var isLoading = false
     private let reader = AppPermissionsReader()
@@ -129,11 +125,13 @@ final class AppPermissionsModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        let (granted, items) = await reader.read()
-        self.granted = granted
-        self.items = items
+        let report = await reader.read()
+        items = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 }
 
@@ -144,6 +142,7 @@ struct AppPermissionsView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -156,7 +155,7 @@ struct AppPermissionsView: View {
                 Text("App Permissions")
                     .font(MD4.Typo.title2)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("TCC.db Audit — wer hat Camera/Mic/FDA. Braucht Full Disk Access für Meister.app.")
+                Text("Lokale Benutzer-TCC-Datenbank: gespeicherte Kamera-, Mikrofon- und weitere Zugriffsentscheidungen.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -170,10 +169,12 @@ struct AppPermissionsView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !model.granted && !model.isLoading {
+        if model.isLoading || model.lastChecked == nil {
+            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if model.issues.contains(where: { $0.kind == .permissionDenied }) {
             fdaPrompt
         } else if model.items.isEmpty {
-            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            ContentUnavailableView(model.issues.isEmpty ? "Keine unterstützten Einträge" : "Berechtigungen nicht ermittelbar", systemImage: "lock.shield")
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
@@ -194,7 +195,7 @@ struct AppPermissionsView: View {
             Text("Full Disk Access erforderlich")
                 .font(MD4.Typo.title3)
                 .foregroundStyle(MD4.SemColor.textPrimary)
-            Text("TCC.db ist SIP-geschützt. Meister.app in System Settings → Privacy & Security → Full Disk Access freischalten, dann Reload.")
+            Text("Der Zugriff wurde verweigert. Festplattenvollzugriff für Meister in den Datenschutzeinstellungen prüfen und erneut laden.")
                 .font(MD4.Typo.body)
                 .foregroundStyle(MD4.SemColor.textSecondary)
                 .multilineTextAlignment(.center)

@@ -1,5 +1,9 @@
 # Meister
 
+Aktueller macOS-Stand: [Roadmap zum Schweizer Messer](docs/ROADMAP.md), [vollständiger Modulkatalog](docs/MODULE-INVENTORY.md) und [Prüfbericht](docs/verification/2026-09-23-smart-macos.md). Die ältere Plattformmatrix unten beschreibt die ursprüngliche Architektur, nicht den gesamten heutigen Funktionsumfang.
+
+Fortsetzung vom 24. September: [einheitliche Diagnoseergebnisse in neun Modulen](docs/verification/2026-09-24-diagnostic-results.md).
+
 One tool, three platforms, one experience.
 
 - **Terminal** (`meister`) — the canonical CLI. Bash, battle-tested, v5.6.
@@ -161,9 +165,9 @@ meister/
 
 - **The bash CLI is the source of truth.** Updates to `maf4711/homebrew-meister` propagate to the macOS app automatically because the app shells out instead of forking logic.
 - **Swift-native only where it's strictly better.** CNContactStore, PhotoKit, NEHotspotNetwork — use Apple frameworks when a shell can't reach them. Never reimplement a working bash command.
-- **Trash, not rm.** Every destructive file move on macOS goes to `~/.Trash/` with a timestamp — 30-day rollback.
+- **Recovery where supported.** System cleanup moves files to Trash and records their actual destination for recovery. Quick Clean never empties Trash. Explicit permanent actions have separate confirmation; Trash retention is not guaranteed.
 - **Backup before destruction.** vCard export, `.abbu` archive, or iOS "Recently Deleted" before any delete.
-- **Zero upload, zero account.** Every app is 100% local.
+- **Local by default, no account required.** Diagnostics run locally. The optional Slack integration sends only when explicitly triggered; webhook credentials live in the login keychain.
 - **Never sign out the user's Apple ID.** AddressBook cleanup works with the account logged in; it only touches local source files.
 
 ## Feature development — the bash CLI is master

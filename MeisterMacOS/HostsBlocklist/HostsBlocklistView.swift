@@ -92,7 +92,7 @@ final class HostsBlocklistModel: ObservableObject {
 
     func copyInstallCommand() {
         guard let staged = stagedPath else { return }
-        let cmd = "sudo cp /etc/hosts /etc/hosts.meister-backup-$(date +%s) && sudo cp \(staged.path.replacingOccurrences(of: " ", with: "\\ ")) /etc/hosts && sudo dscacheutil -flushcache"
+        let cmd = "sudo cp /etc/hosts /etc/hosts.meister-backup-$(date +%s) && sudo cp \(CommandRunner.shellQuote(staged.path)) /etc/hosts && sudo dscacheutil -flushcache"
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(cmd, forType: .string)

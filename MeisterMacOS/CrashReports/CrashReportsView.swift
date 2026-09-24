@@ -103,6 +103,7 @@ final class CrashReportsModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.reports = await reader.read()

@@ -48,7 +48,10 @@ actor UndoCleanupReader {
             guard let path = e["path"] as? String,
                   let recycled = e["recycled"] as? Bool, recycled else { return nil }
             let original = URL(fileURLWithPath: path)
-            let trashItem = trash.appendingPathComponent(original.lastPathComponent)
+            // Never guess by filename: Finder renames collisions in Trash.
+            guard let trashPath = e["trashPath"] as? String else { return nil }
+            let trashItem = URL(fileURLWithPath: trashPath).standardizedFileURL
+            guard trashItem.path.hasPrefix(trash.standardizedFileURL.path + "/") else { return nil }
             let bytes = (e["bytes"] as? Int64) ??
                 Int64((e["bytes"] as? NSNumber)?.int64Value ?? 0)
             let category = (e["category"] as? String) ?? "—"
@@ -100,6 +103,7 @@ final class UndoCleanupModel: ObservableObject {
     var availableCount: Int { entries.filter(\.isAvailable).count }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         let (m, e) = await reader.loadLatest()
@@ -173,7 +177,7 @@ struct UndoCleanupView: View {
         } else if model.entries.isEmpty {
             ContentUnavailableView("Kein Cleanup zum Rückgängig-Machen",
                                    systemImage: "arrow.uturn.backward",
-                                   description: Text("Noch kein System-Cleanup-Lauf gefunden — oder alle Items wurden bereits aus dem Trash entfernt."))
+                                   description: Text("Kein verlässlich zuordenbarer Eintrag vorhanden. Ältere Protokolle ohne Papierkorbpfad bitte über Finder wiederherstellen."))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(alignment: .leading, spacing: 0) {
