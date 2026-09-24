@@ -1,7 +1,7 @@
 #if os(macOS)
 import Foundation
 
-/// Thin Swift wrapper around the bash-based `meister` CLI from the
+/// Thin Swift wrapper around the bash-based `MeisterAI` CLI (with `meister` fallback) from the
 /// `maf4711/homebrew-meister` tap. Shells out to the installed binary
 /// instead of reimplementing its logic, so the macOS GUI stays in sync
 /// with whatever `brew upgrade meister` ships.
@@ -23,13 +23,31 @@ public struct MeisterBash: Sendable {
     public static let shared = MeisterBash()
 
     /// Preferred install locations, in priority order.
-    private static let candidatePaths: [String] = [
+    static let defaultCandidatePaths: [String] = [
+        "/opt/homebrew/bin/MeisterAI",
+        "/usr/local/bin/MeisterAI",
         "/opt/homebrew/bin/meister",
         "/usr/local/bin/meister",
     ]
 
+    private let candidatePaths: [String]
+
+    public init() {
+        candidatePaths = Self.defaultCandidatePaths
+    }
+
+    // Internal injection keeps tests independent of host Homebrew installations.
+    init(candidatePaths: [String]) {
+        self.candidatePaths = candidatePaths
+    }
+
+    public var executableName: String {
+        guard case .installed(let url) = resolve() else { return "MeisterAI" }
+        return url.lastPathComponent
+    }
+
     public func resolve() -> Resolution {
-        for path in Self.candidatePaths {
+        for path in candidatePaths {
             if FileManager.default.isExecutableFile(atPath: path) {
                 return .installed(URL(fileURLWithPath: path))
             }
@@ -96,7 +114,7 @@ public enum MeisterBashError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notInstalled:
-            return "The `meister` CLI is not installed. Run `brew tap maf4711/meister && brew install meister` to enable the GUI modules that depend on it."
+            return "The `MeisterAI` / `meister` CLI is not installed. Run `brew tap maf4711/meister && brew install meister` to enable the GUI modules that depend on it."
         }
     }
 }
