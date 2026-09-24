@@ -59,6 +59,7 @@ final class DefaultAppsModel: ObservableObject {
     private let reader = DefaultAppsReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.entries = await reader.read()

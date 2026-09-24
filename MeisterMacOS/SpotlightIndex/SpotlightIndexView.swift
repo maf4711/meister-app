@@ -75,14 +75,8 @@ actor SpotlightReader {
     }
 
     private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let result = CommandRunner.run(tool, args)
+        return result.output
     }
 }
 
@@ -93,6 +87,7 @@ final class SpotlightIndexModel: ObservableObject {
     private let reader = SpotlightReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.volumes = await reader.read()
@@ -105,14 +100,14 @@ final class SpotlightIndexModel: ObservableObject {
 
     func copyRebuildCommand(for path: String) {
         // Rebuilding requires sudo. We never run sudo from the app.
-        let cmd = "sudo mdutil -E \"\(path)\""
+        let cmd = "sudo mdutil -E \(CommandRunner.shellQuote(path))"
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(cmd, forType: .string)
     }
 
     func copyEnableCommand(for path: String) {
-        let cmd = "sudo mdutil -i on \"\(path)\""
+        let cmd = "sudo mdutil -i on \(CommandRunner.shellQuote(path))"
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(cmd, forType: .string)

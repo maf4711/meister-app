@@ -9,21 +9,34 @@ struct KeychainSummary: Identifiable, Hashable {
     let genericPasswords: Int
     let certificates: Int
     let keys: Int
-    let sizeBytes: Int64
+    let sizeBytes: Int64?
     let lastModified: Date?
 }
 
 actor KeychainAuditReader {
-    func read() async -> [KeychainSummary] {
-        // 1. List user keychains
-        let listOut = run("/usr/bin/security", ["list-keychains", "-d", "user"])
-        let paths = parseKeychainList(listOut)
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
 
-        var out: [KeychainSummary] = []
-        for path in paths {
-            out.append(summarize(path: path))
+    func read() async -> DiagnosticReport<[KeychainSummary]> {
+        let list = command("/usr/bin/security", ["list-keychains", "-d", "user"])
+        if let issue = list.issue(source: "Schlüsselbundliste") { return .init(value: nil, issues: [issue]) }
+        let paths = parseKeychainList(list.output)
+        if paths.isEmpty && !list.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Schlüsselbundliste")])
         }
-        return out
+        var values: [KeychainSummary] = []
+        var issues: [DiagnosticIssue] = []
+        for path in paths {
+            let result = command("/usr/bin/security", ["dump-keychain", path])
+            if let issue = result.issue(source: "Schlüsselbund-Metadaten") { issues.append(issue); continue }
+            if !result.output.isEmpty && !result.output.contains("keychain:") && !result.output.contains("class:") {
+                issues.append(.init(kind: .invalidOutput, source: "Schlüsselbund-Metadaten")); continue
+            }
+            values.append(summarize(path: path, dump: result.output))
+        }
+        return .init(value: values.isEmpty && !issues.isEmpty ? nil : values, issues: issues)
     }
 
     nonisolated func parseKeychainList(_ raw: String) -> [String] {
@@ -33,14 +46,13 @@ actor KeychainAuditReader {
             .filter { $0.hasSuffix(".keychain-db") || $0.hasSuffix(".keychain") }
     }
 
-    nonisolated private func summarize(path: String) -> KeychainSummary {
+    nonisolated private func summarize(path: String, dump: String) -> KeychainSummary {
         let url = URL(fileURLWithPath: path)
         let attrs = try? FileManager.default.attributesOfItem(atPath: path)
-        let bytes = Int64((attrs?[.size] as? NSNumber)?.int64Value ?? 0)
+        let bytes = (attrs?[.size] as? NSNumber)?.int64Value
         let modified = attrs?[.modificationDate] as? Date
 
         // dump-keychain (no -d / no -i flag) shows metadata only — no decrypt prompt.
-        let dump = run("/usr/bin/security", ["dump-keychain", path])
         let counts = countItems(in: dump)
 
         return KeychainSummary(
@@ -78,14 +90,4 @@ actor KeychainAuditReader {
         return (total, internetP, genericP, cert, key)
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }

@@ -52,6 +52,8 @@ struct BrowserPrivacyView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            Text("Firefox-Verlauf bitte im Browser löschen: seine Datenbank enthält auch Lesezeichen.")
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
             Divider().background(MD4.SemColor.divider)
             content
             Divider().background(MD4.SemColor.divider)

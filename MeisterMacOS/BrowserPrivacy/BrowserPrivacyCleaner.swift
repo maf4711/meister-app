@@ -110,10 +110,11 @@ actor BrowserPrivacyCleaner {
             return [lib.appendingPathComponent("Application Support/Google/Chrome/Default/Cache"),
                     lib.appendingPathComponent("Application Support/Google/Chrome/Default/Code Cache")]
 
-        case (.firefox, .history), (.firefox, .cookies):
-            // Firefox profiles live under Profiles/<random>.default-release/
-            // Keep simple: scan all profiles' places.sqlite (history+bookmarks) or cookies.sqlite.
-            return firefoxProfileFiles(name: target == .history ? "places.sqlite" : "cookies.sqlite")
+        case (.firefox, .history):
+            // places.sqlite also contains bookmarks. Never recycle it to clear history.
+            return []
+        case (.firefox, .cookies):
+            return firefoxProfileFiles(name: "cookies.sqlite")
         case (.firefox, .downloads):
             return firefoxProfileFiles(name: "downloads.sqlite")
         case (.firefox, .cache):

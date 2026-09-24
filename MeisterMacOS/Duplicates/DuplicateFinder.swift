@@ -18,11 +18,14 @@ actor DuplicateFinder {
     /// Find duplicates under the given root URLs.
     /// Two-stage: bucket by size, then SHA256 only same-size files.
     func find(in roots: [URL], minSize: Int64 = DuplicateFinder.minSize) async -> [DuplicateGroup] {
+        var seen = Set<URL>()
         var sizeBuckets: [Int64: [URL]] = [:]
 
         for root in roots {
             for url in enumerate(root) {
-                guard let bytes = try? size(of: url), bytes >= minSize else { continue }
+                guard !Task.isCancelled else { return [] }
+                guard seen.insert(url.standardizedFileURL.resolvingSymlinksInPath()).inserted,
+                      let bytes = try? size(of: url), bytes >= minSize else { continue }
                 sizeBuckets[bytes, default: []].append(url)
             }
         }
@@ -78,11 +81,19 @@ actor DuplicateFinder {
 
     private func hashAll(_ urls: [URL]) async -> [HashedFile] {
         await withTaskGroup(of: HashedFile?.self) { group in
-            for url in urls {
-                group.addTask { Self.sha256(of: url).map { HashedFile(url: url, hash: $0) } }
+            var iterator = urls.makeIterator()
+            for _ in 0..<4 {
+                if let url = iterator.next() {
+                    group.addTask { Self.sha256(of: url).map { HashedFile(url: url, hash: $0) } }
+                }
             }
             var out: [HashedFile] = []
-            for await h in group { if let h = h { out.append(h) } }
+            for await h in group {
+                if let h { out.append(h) }
+                if !Task.isCancelled, let url = iterator.next() {
+                    group.addTask { Self.sha256(of: url).map { HashedFile(url: url, hash: $0) } }
+                }
+            }
             return out
         }
     }
@@ -94,11 +105,13 @@ actor DuplicateFinder {
 
         var hasher = SHA256()
         var buf = [UInt8](repeating: 0, count: hashChunk)
-        while stream.hasBytesAvailable {
+        while true {
+            if Task.isCancelled { return nil }
             let read = buf.withUnsafeMutableBufferPointer { ptr -> Int in
                 stream.read(ptr.baseAddress!, maxLength: ptr.count)
             }
-            if read <= 0 { break }
+            if read < 0 { return nil }
+            if read == 0 { break }
             hasher.update(data: Data(buf.prefix(read)))
         }
         let digest = hasher.finalize()

@@ -21,6 +21,7 @@ final class SSHKeysModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.keys = await reader.read()

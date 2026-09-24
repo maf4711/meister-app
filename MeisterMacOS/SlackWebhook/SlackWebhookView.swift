@@ -3,12 +3,33 @@ import MeradOSDesign4
 
 @MainActor
 final class SlackWebhookModel: ObservableObject {
-    @AppStorage("meister.slack.webhook") var webhookURL: String = ""
+    @Published var webhookURL: String = ""
     @Published var isSending = false
     @Published var lastResult: String?
 
     var isConfigured: Bool {
-        URL(string: webhookURL)?.scheme?.hasPrefix("http") == true
+        WebhookSecretStore.validURL(webhookURL) != nil
+    }
+
+    func load() {
+        do {
+            webhookURL = try WebhookSecretStore.load()
+            if let legacy = UserDefaults.standard.string(forKey: "meister.slack.webhook") {
+                if webhookURL.isEmpty {
+                    try WebhookSecretStore.save(legacy)
+                    webhookURL = legacy
+                }
+                UserDefaults.standard.removeObject(forKey: "meister.slack.webhook")
+            }
+        } catch { lastResult = error.localizedDescription }
+    }
+
+    func save() {
+        guard webhookURL.isEmpty || isConfigured else { lastResult = "Gültige Slack-HTTPS-URL erforderlich"; return }
+        do {
+            try WebhookSecretStore.save(webhookURL)
+            lastResult = "Im Schlüsselbund gespeichert"
+        } catch { lastResult = error.localizedDescription }
     }
 
     func sendTest() async {
@@ -28,7 +49,8 @@ final class SlackWebhookModel: ObservableObject {
     }
 
     private func send(text: String) async {
-        guard let url = URL(string: webhookURL) else {
+        guard !isSending else { return }
+        guard let url = WebhookSecretStore.validURL(webhookURL) else {
             lastResult = "Ungültige Webhook-URL"
             return
         }
@@ -37,19 +59,22 @@ final class SlackWebhookModel: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 15
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any] = ["text": text]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         do {
-            let (_, resp) = try await URLSession.shared.data(for: request)
+            let session = URLSession(configuration: .ephemeral, delegate: WebhookSessionDelegate(), delegateQueue: nil)
+            defer { session.invalidateAndCancel() }
+            let (_, resp) = try await session.data(for: request)
             if let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) {
                 lastResult = "OK · \(http.statusCode)"
             } else if let http = resp as? HTTPURLResponse {
                 lastResult = "HTTP \(http.statusCode)"
             }
         } catch {
-            lastResult = error.localizedDescription
+            lastResult = "Senden fehlgeschlagen. Netzwerkverbindung und Webhook prüfen."
         }
     }
 }
@@ -64,6 +89,7 @@ struct SlackWebhookView: View {
             content
         }
         .background(MD4.SemColor.background)
+        .task { model.load() }
     }
 
     private var header: some View {
@@ -71,7 +97,7 @@ struct SlackWebhookView: View {
             Text("Slack Webhook")
                 .font(MD4.Typo.title2)
                 .foregroundStyle(MD4.SemColor.textPrimary)
-            Text("Autopilot postet nach jedem Cleanup eine Zusammenfassung. Browser-Test-Button.")
+            Text("Optionaler Versand per Test-Button. Keine automatische Verbindung zum Autopilot.")
                 .font(MD4.Typo.small)
                 .foregroundStyle(MD4.SemColor.textSecondary)
         }
@@ -95,7 +121,7 @@ struct SlackWebhookView: View {
             Text("Incoming Webhook URL")
                 .font(MD4.Typo.headline)
                 .foregroundStyle(MD4.SemColor.textPrimary)
-            TextField("https://hooks.slack.com/services/T.../B.../...", text: $model.webhookURL)
+            SecureField("https://hooks.slack.com/services/T.../B.../...", text: $model.webhookURL)
                 .textFieldStyle(.roundedBorder)
                 .font(MD4.Typo.tabular(MD4.Typo.body))
             HStack {
@@ -106,11 +132,12 @@ struct SlackWebhookView: View {
                         .foregroundStyle(MD4.SemColor.success)
                 } else {
                     Image(systemName: "exclamationmark.circle").foregroundStyle(MD4.SemColor.warning)
-                    Text("Keine URL gesetzt — Autopilot kann keine Reports senden")
+                    Text("Gültige Slack-HTTPS-URL erforderlich")
                         .font(MD4.Typo.caption)
                         .foregroundStyle(MD4.SemColor.warning)
                 }
                 Spacer()
+                Button("Im Schlüsselbund speichern") { model.save() }
             }
         }
         .padding(14)

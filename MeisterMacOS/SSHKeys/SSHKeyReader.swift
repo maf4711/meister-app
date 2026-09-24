@@ -107,21 +107,9 @@ actor SSHKeyReader {
     /// Detect passphrase state by trying empty passphrase. If `ssh-keygen -y -P "" -f <key>`
     /// succeeds, the key is unprotected. If it fails with "wrong passphrase", protected.
     nonisolated func privateKeyHasPassphrase(at privateURL: URL) -> SSHKey.KeyState {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-keygen")
-        p.arguments = ["-y", "-P", "", "-f", privateURL.path]
-        let outPipe = Pipe()
-        let errPipe = Pipe()
-        p.standardOutput = outPipe
-        p.standardError = errPipe
-        do {
-            try p.run()
-            p.waitUntilExit()
-        } catch {
-            return .unknown
-        }
-        if p.terminationStatus == 0 { return .unprotected }
-        let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let result = CommandRunner.run("/usr/bin/ssh-keygen", ["-y", "-P", "", "-f", privateURL.path])
+        if result.succeeded { return .unprotected }
+        let err = result.output
         if err.lowercased().contains("incorrect passphrase") ||
            err.lowercased().contains("bad passphrase") ||
            err.lowercased().contains("requires a passphrase") {
@@ -131,13 +119,7 @@ actor SSHKeyReader {
     }
 
     private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let result = CommandRunner.run(tool, args)
+        return result.output
     }
 }

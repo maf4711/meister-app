@@ -8,7 +8,7 @@ import MeradOSDesign4
 /// with aurora outline).
 struct DashboardView: View {
     @StateObject private var model = DashboardModel()
-    @State private var celebrate = false
+    @EnvironmentObject private var nav: NavigationState
 
     var body: some View {
         ZStack {
@@ -60,24 +60,14 @@ struct DashboardView: View {
 
     @ViewBuilder
     private var bento: some View {
-        let cols = [GridItem(.flexible()), GridItem(.flexible()),
-                    GridItem(.flexible()), GridItem(.flexible())]
-        LazyVGrid(columns: cols, spacing: 16) {
-            // Health Ring — 2x2
-            healthRingTile
-                .gridCellColumns(2)
-            // Reclaimable Storage — 2x1
-            reclaimableTile
-                .gridCellColumns(2)
-            // Security badge — 2x1
-            securityTile
-                .gridCellColumns(2)
-            // Snapshots count — 2x1
-            snapshotsTile
-                .gridCellColumns(2)
-            // AI Recommendation — 4-wide
+        VStack(spacing: 16) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: 16) {
+                healthRingTile
+                reclaimableTile
+                securityTile
+                snapshotsTile
+            }
             aiRecommendationTile
-                .gridCellColumns(4)
         }
     }
 
@@ -108,7 +98,7 @@ struct DashboardView: View {
                         }
                     }
                 if let snap = model.snapshot {
-                    Text(verdict(snap.score))
+                    Text(!snap.hasMeasurements ? "Keine Messwerte" : snap.hasUnknowns ? "Teilbewertung — Messwerte fehlen" : verdict(snap.score))
                         .font(MD4.Typo.small)
                         .foregroundStyle(verdictColor(snap.score))
                         .padding(.top, 4)
@@ -123,7 +113,7 @@ struct DashboardView: View {
                 HStack {
                     Image(systemName: "sparkles")
                         .foregroundStyle(MD4.SemColor.brandPrimary)
-                    Text("Reclaimable")
+                    Text("Zur Prüfung")
                         .font(MD4.Typo.caption)
                         .foregroundStyle(MD4.SemColor.textSecondary)
                         .textCase(.uppercase)
@@ -134,7 +124,7 @@ struct DashboardView: View {
                            decimals: 1,
                            font: .system(size: 42, weight: .light))
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("System Cleanup, Caches, Logs, Trash")
+                Text("Geschätzte Dateigröße; Freigabe erst nach Prüfung.")
                     .font(MD4.Typo.caption)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -184,9 +174,9 @@ struct DashboardView: View {
                         .font(MD4.Typo.title3)
                         .foregroundStyle(MD4.SemColor.textPrimary)
                 } else {
-                    Text("kein Backup")
+                    Text("Keine Zeitangabe")
                         .font(MD4.Typo.title3)
-                        .foregroundStyle(MD4.SemColor.warning)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
                 }
                 Text("\(model.snapshotCount) APFS-Snapshots")
                     .font(MD4.Typo.caption)
@@ -201,18 +191,42 @@ struct DashboardView: View {
                 HStack {
                     Image(systemName: "wand.and.stars")
                         .foregroundStyle(MD4.SemColor.brandPrimary)
-                    Text("Smart Recommendation")
+                    Text("Nächste Schritte")
                         .font(MD4.Typo.caption.bold())
                         .foregroundStyle(MD4.SemColor.brandPrimary)
                         .textCase(.uppercase)
                     Spacer()
                 }
-                Text(model.recommendation)
-                    .font(MD4.Typo.title3)
-                    .foregroundStyle(MD4.SemColor.textPrimary)
-                Text(model.recommendationDetail)
-                    .font(MD4.Typo.small)
-                    .foregroundStyle(MD4.SemColor.textSecondary)
+                if model.isLoading {
+                    ProgressView("Diagnose läuft…")
+                } else if model.snapshot == nil {
+                    Text("Diagnose noch nicht verfügbar.")
+                } else if model.recommendations.isEmpty {
+                    Text(model.snapshot?.hasUnknowns == true ? "Diagnose unvollständig" : "Keine dringenden Maßnahmen erkannt")
+                        .font(MD4.Typo.title3)
+                    Text("Bewertung aus lokalen Messwerten. Bereinigungen bleiben deine Entscheidung.")
+                        .font(MD4.Typo.small)
+                        .foregroundStyle(MD4.SemColor.textSecondary)
+                } else {
+                    ForEach(model.recommendations) { recommendation in
+                        Button { nav.selection = recommendation.moduleID } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(recommendation.title).font(MD4.Typo.headline)
+                                    Text(recommendation.detail).font(MD4.Typo.small)
+                                        .foregroundStyle(MD4.SemColor.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }.padding(.vertical, 8)
+                        }.buttonStyle(.plain)
+                    }
+                }
+                if let timestamp = model.snapshot?.timestamp {
+                    Text("Stand: \(timestamp.formatted(date: .abbreviated, time: .shortened))")
+                        .font(MD4.Typo.caption).foregroundStyle(MD4.SemColor.textSecondary)
+                }
+
             }
         }
     }
@@ -237,6 +251,7 @@ struct DashboardView: View {
 
 #Preview {
     DashboardView()
+        .environmentObject(NavigationState())
         .frame(width: 900, height: 720)
         .preferredColorScheme(.dark)
 }

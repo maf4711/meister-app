@@ -160,14 +160,8 @@ actor HardwareInventoryReader {
     }
 
     private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let result = CommandRunner.run(tool, args)
+        return result.output
     }
 }
 
@@ -178,6 +172,7 @@ final class HardwareInventoryModel: ObservableObject {
     private let reader = HardwareInventoryReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.sections = await reader.read()

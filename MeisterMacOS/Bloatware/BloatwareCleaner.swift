@@ -53,6 +53,7 @@ final class BloatwareCleaner {
     }
 
     private func killOne(_ f: BloatFinding, quarantine: URL) async -> (Bool, String?) {
+        guard !BloatCatalog.isKeep(f.name), !BloatCatalog.isKeep(f.path) else { return (false, "Geschützter Eintrag") }
         switch f.kind {
         case .launchAgent:
             if f.path.hasPrefix("/Library/") {
@@ -84,23 +85,7 @@ final class BloatwareCleaner {
     }
 
     private func bootout(plist: String) {
-        let uid = getuid()
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        p.arguments = ["bootout", "gui/\(uid)", plist]
-        p.standardOutput = Pipe()
-        p.standardError = Pipe()
-        try? p.run()
-        p.waitUntilExit()
-        if p.terminationStatus != 0 {
-            let u = Process()
-            u.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-            u.arguments = ["unload", plist]
-            u.standardOutput = Pipe()
-            u.standardError = Pipe()
-            try? u.run()
-            u.waitUntilExit()
-        }
+        _ = CommandRunner.run("/bin/launchctl", ["bootout", "gui/\(getuid())", plist])
     }
 
     private func moveAside(_ src: URL, into dir: URL) -> (Bool, String?) {
@@ -133,39 +118,18 @@ final class BloatwareCleaner {
             fileManager.isExecutableFile(atPath: $0)
         }
         guard let brew else { return (false, "brew not found") }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: brew)
-        p.arguments = ["uninstall", "--cask", name]
-        let err = Pipe()
-        p.standardOutput = Pipe()
-        p.standardError = err
-        do {
-            try p.run()
-            p.waitUntilExit()
-        } catch {
-            return (false, error.localizedDescription)
-        }
-        if p.terminationStatus == 0 { return (true, nil) }
-        let msg = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
-        return (false, msg?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "brew failed")
+        let result = CommandRunner.run(brew, ["uninstall", "--cask", "--", name], timeout: 300)
+        return (result.succeeded, result.succeeded ? nil : result.output)
     }
 
     private func removeLoginItem(_ name: String) -> (Bool, String?) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        p.arguments = [
-            "-e",
-            "tell application \"System Events\" to delete login item \"\(name.replacingOccurrences(of: "\"", with: "\\\""))\""
-        ]
-        p.standardOutput = Pipe()
-        p.standardError = Pipe()
-        do {
-            try p.run()
-            p.waitUntilExit()
-        } catch {
-            return (false, error.localizedDescription)
-        }
-        return p.terminationStatus == 0 ? (true, nil) : (false, "osascript failed")
+        let script = """
+        on run argv
+            tell application "System Events" to delete login item (item 1 of argv)
+        end run
+        """
+        let result = CommandRunner.run("/usr/bin/osascript", ["-e", script, name])
+        return (result.succeeded, result.succeeded ? nil : result.output)
     }
 
     private func writeManifest(_ manifest: BloatKillManifest) throws {

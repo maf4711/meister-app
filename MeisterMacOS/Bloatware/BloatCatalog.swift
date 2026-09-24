@@ -10,7 +10,8 @@ enum BloatCatalog {
         "docker", "lulu", "little snitch", "clamxav", "malwarebytes",
         "1password", "bitwarden", "github", "goland", "bbedit", "xcode",
         "raycast", "signal", "ledger", "bitcoin", "home assistant", "home-assistant",
-        "aqara", "eve", "deco",
+        "aqara", "eve", "deco", "cpu-guard", "sim-guard", "hud",
+        "avast", "avg", "mcafee", "norton", "trend micro", "trendmicro",
     ]
 
     static let p0Patterns: [String] = [

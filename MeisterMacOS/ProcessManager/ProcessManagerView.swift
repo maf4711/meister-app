@@ -16,12 +16,21 @@ struct ProcessRow: Identifiable, Hashable {
 }
 
 actor ProcessReader {
-    func read() async -> [ProcessRow] {
-        let raw = run("/bin/ps", ["-axc", "-o", "pid=,user=,%cpu=,%mem=,rss=,comm="])
-        // -axc → all processes including others, comm only (without args, more readable)
-        let withArgs = run("/bin/ps", ["-ax", "-o", "pid=,command="])
-        let argMap = parseArgs(withArgs)
-        return parse(raw, argMap: argMap)
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<[ProcessRow]> {
+        let result = command("/bin/ps", ["-axc", "-o", "pid=,user=,%cpu=,%mem=,rss=,comm="])
+        if let issue = result.issue(source: "Prozessliste") { return .init(value: nil, issues: [issue]) }
+        let args = command("/bin/ps", ["-ax", "-o", "pid=,command="])
+        var issues = args.issue(source: "Prozessargumente").map { [$0] } ?? []
+        let rows = parse(result.output, argMap: args.succeeded ? parseArgs(args.output) : [:])
+        if rows.isEmpty || rows.count != result.output.split(separator: "\n").count {
+            issues.append(.init(kind: .invalidOutput, source: "Prozessliste"))
+        }
+        return .init(value: rows.isEmpty ? nil : rows, issues: issues)
     }
 
     nonisolated func parse(_ raw: String, argMap: [Int: String] = [:]) -> [ProcessRow] {
@@ -32,7 +41,9 @@ actor ProcessReader {
                   let pid = Int(parts[0]),
                   let cpu = Double(parts[2]),
                   let mem = Double(parts[3]),
-                  let rss = Int64(parts[4]) else { continue }
+                  let rss = Int64(parts[4]), pid > 0,
+                  cpu.isFinite, cpu >= 0, mem.isFinite, mem >= 0,
+                  rss >= 0, rss <= Int64.max / 1024 else { continue }
             let command = parts[5..<parts.count].joined(separator: " ")
             let fullCommand = argMap[pid] ?? command
             out.append(ProcessRow(
@@ -60,19 +71,11 @@ actor ProcessReader {
     }
 
     func kill(pid: Int, signal: Int32 = SIGTERM) async -> Bool {
-        Foundation.kill(pid_t(pid), signal) == 0
+        guard pid > 1, pid != Int(getpid()), pid <= Int(Int32.max),
+              signal == SIGTERM || signal == SIGKILL else { return false }
+        return Foundation.kill(pid_t(pid), signal) == 0
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
@@ -80,6 +83,8 @@ final class ProcessManagerModel: ObservableObject {
     @Published var rows: [ProcessRow] = []
     @Published var query: String = ""
     @Published var sort: Sort = .cpu
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var isLoading = false
     @Published var actionStatus: String?
     private let reader = ProcessReader()
@@ -118,7 +123,11 @@ final class ProcessManagerModel: ObservableObject {
         refreshTask = Task { @MainActor in
             while !Task.isCancelled {
                 isLoading = true
-                self.rows = await reader.read()
+                let report = await reader.read()
+                guard !Task.isCancelled else { return }
+                self.rows = report.value ?? []
+                issues = report.issues
+                lastChecked = report.timestamp
                 isLoading = false
                 try? await Task.sleep(for: .seconds(3))
             }
@@ -128,6 +137,7 @@ final class ProcessManagerModel: ObservableObject {
     func stopAutoRefresh() {
         refreshTask?.cancel()
         refreshTask = nil
+        isLoading = false
     }
 
     func kill(pid: Int, force: Bool) async {
@@ -142,6 +152,7 @@ struct ProcessManagerView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             Divider().background(MD4.SemColor.divider)
             controls
             Divider().background(MD4.SemColor.divider)

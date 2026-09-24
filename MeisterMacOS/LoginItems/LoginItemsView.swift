@@ -16,6 +16,7 @@ final class LoginItemsModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.items = await reader.readAll()

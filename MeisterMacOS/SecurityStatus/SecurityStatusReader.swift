@@ -25,6 +25,14 @@ struct SecurityAction: Hashable {
 
 actor SecurityStatusReader {
 
+    func readCore() async -> [SecurityCheck] {
+        async let fv = fileVault()
+        async let fw = firewall()
+        async let gk = gatekeeper()
+        async let sip = systemIntegrityProtection()
+        return await [fv, fw, gk, sip]
+    }
+
     func readAll() async -> [SecurityCheck] {
         async let fv = fileVault()
         async let fw = firewall()
@@ -39,13 +47,14 @@ actor SecurityStatusReader {
 
     private func fileVault() async -> SecurityCheck {
         let out = run("/usr/bin/fdesetup", ["status"])
-        let on = out.lowercased().contains("filevault is on")
+        let state = Self.parseState(out, enabled: "filevault is on", disabled: "filevault is off", critical: true)
+        let needsAction: Bool = { switch state { case .warn, .bad: return true; default: return false } }()
         return SecurityCheck(
             id: "filevault",
             title: "FileVault",
-            state: on ? .ok("Aktiv") : .bad("Aus — Disk unverschlüsselt"),
+            state: state,
             detail: out.trimmingCharacters(in: .whitespacesAndNewlines),
-            action: on ? nil : .init(
+            action: !needsAction ? nil : .init(
                 label: "FileVault einschalten",
                 url: URL(string: "x-apple.systempreferences:com.apple.preference.security?FileVault")!
             )
@@ -54,13 +63,14 @@ actor SecurityStatusReader {
 
     private func firewall() async -> SecurityCheck {
         let out = run("/usr/libexec/ApplicationFirewall/socketfilterfw", ["--getglobalstate"])
-        let on = out.lowercased().contains("enabled")
+        let state = Self.parseState(out, enabled: "enabled", disabled: "disabled", critical: false)
+        let needsAction: Bool = { switch state { case .warn, .bad: return true; default: return false } }()
         return SecurityCheck(
             id: "firewall",
             title: "Firewall",
-            state: on ? .ok("Aktiv") : .warn("Aus"),
+            state: state,
             detail: out.trimmingCharacters(in: .whitespacesAndNewlines),
-            action: on ? nil : .init(
+            action: !needsAction ? nil : .init(
                 label: "Firewall öffnen",
                 url: URL(string: "x-apple.systempreferences:com.apple.preference.security?Firewall")!
             )
@@ -69,11 +79,11 @@ actor SecurityStatusReader {
 
     private func gatekeeper() async -> SecurityCheck {
         let out = run("/usr/sbin/spctl", ["--status"])
-        let on = out.lowercased().contains("assessments enabled")
+        let state = Self.parseState(out, enabled: "assessments enabled", disabled: "assessments disabled", critical: true)
         return SecurityCheck(
             id: "gatekeeper",
             title: "Gatekeeper",
-            state: on ? .ok("Aktiv") : .bad("Aus — beliebige Apps können starten"),
+            state: state,
             detail: out.trimmingCharacters(in: .whitespacesAndNewlines),
             action: nil
         )
@@ -81,11 +91,11 @@ actor SecurityStatusReader {
 
     private func systemIntegrityProtection() async -> SecurityCheck {
         let out = run("/usr/bin/csrutil", ["status"])
-        let on = out.lowercased().contains("enabled")
+        let state = Self.parseState(out, enabled: "enabled", disabled: "disabled", critical: false)
         return SecurityCheck(
             id: "sip",
             title: "System Integrity Protection",
-            state: on ? .ok("Aktiv") : .warn("Aus — System ungeschützt"),
+            state: state,
             detail: out.trimmingCharacters(in: .whitespacesAndNewlines),
             action: nil
         )
@@ -103,7 +113,7 @@ actor SecurityStatusReader {
         return SecurityCheck(
             id: "xprotect",
             title: "XProtect (Apple AntiMalware)",
-            state: .ok(version),
+            state: version == "unbekannt" ? .unknown("Nicht ermittelt") : .ok(version),
             detail: nil,
             action: nil
         )
@@ -114,12 +124,12 @@ actor SecurityStatusReader {
         let count = countQuarantineFiles()
         let state: SecurityState = count == 0
             ? .ok("0 Dateien")
-            : .warn("\(count) Datei\(count == 1 ? "" : "en")")
+            : .ok("\(count) Datei\(count == 1 ? "" : "en") mit Herkunftsmarkierung")
         return SecurityCheck(
             id: "quarantine",
             title: "Quarantine-Flags in ~/Downloads + ~/Desktop",
             state: state,
-            detail: count == 0 ? nil : "Aus dem Web heruntergeladen, noch nicht von Gatekeeper geprüft.",
+            detail: count == 0 ? nil : "Herkunftsmarkierungen sind Teil des macOS-Schutzes und kein Nachweis für Schadsoftware.",
             action: nil
         )
     }
@@ -152,20 +162,16 @@ actor SecurityStatusReader {
         return res > 0
     }
 
+    nonisolated static func parseState(_ output: String, enabled: String, disabled: String,
+                                       critical: Bool) -> SecurityState {
+        let value = output.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.contains(enabled) { return .ok("Aktiv") }
+        if value.contains(disabled) { return critical ? .bad("Deaktiviert") : .warn("Deaktiviert") }
+        return .unknown("Status nicht ermittelbar")
+    }
+
     private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do {
-            try p.run()
-            p.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8) ?? ""
-        } catch {
-            return ""
-        }
+        let result = CommandRunner.run(tool, args)
+        return result.output
     }
 }

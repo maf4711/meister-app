@@ -6,7 +6,7 @@ final class BloatCatalogTests: XCTestCase {
     func test_p0_cleanmymac() {
         XCTAssertEqual(BloatCatalog.severity(for: "CleanMyMac X"), .p0)
         XCTAssertEqual(BloatCatalog.severity(for: "ccleaner"), .p0)
-        XCTAssertEqual(BloatCatalog.severity(for: "com.avast.hub"), .p0)
+        XCTAssertNil(BloatCatalog.severity(for: "com.avast.hub"), "Existing security services must be preserved")
     }
 
     func test_p1_keystone() {
