@@ -1,4 +1,5 @@
 """Offline release authorization regression tests; no real build or messages."""
+
 import json
 import os
 from pathlib import Path
@@ -41,15 +42,24 @@ class ReleaseGuards(unittest.TestCase):
         self.env = os.environ.copy()
         for key in ("MEISTER_TESTFLIGHT_AUTO_SHIP", "MEISTER_NOTIFY_CONTACT"):
             self.env.pop(key, None)
-        self.env.update(PATH=f"{self.root / 'bin'}:{os.defpath}", GUARD_CALLS=str(self.calls))
+        self.env.update(
+            PATH=f"{self.root / 'bin'}:{os.defpath}", GUARD_CALLS=str(self.calls)
+        )
 
     def run_script(self, name, *args, **env):
         result = subprocess.run(
             ["/bin/bash", str(self.root / "scripts" / name), *args],
-            env={**self.env, **env}, capture_output=True, text=True, timeout=10,
+            env={**self.env, **env},
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        return [json.loads(line) for line in self.calls.read_text().splitlines()] if self.calls.exists() else []
+        return (
+            [json.loads(line) for line in self.calls.read_text().splitlines()]
+            if self.calls.exists()
+            else []
+        )
 
     def test_auto_ship_default_has_no_side_effects(self):
         self.assertEqual(self.run_script("auto-ship.sh"), [])
@@ -59,7 +69,10 @@ class ReleaseGuards(unittest.TestCase):
     def test_non_one_auto_ship_values_do_not_authorize(self):
         for value in ("", "0", "true", "yes"):
             with self.subTest(value=value):
-                self.assertEqual(self.run_script("auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP=value), [])
+                self.assertEqual(
+                    self.run_script("auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP=value),
+                    [],
+                )
 
     def test_notify_default_has_no_side_effects(self):
         self.assertEqual(self.run_script("notify-tom.sh"), [])
@@ -69,7 +82,9 @@ class ReleaseGuards(unittest.TestCase):
         (self.root / "build").mkdir()
         for value in ("", "0", "true", "yes"):
             with self.subTest(value=value):
-                self.assertEqual(self.run_script("notify-tom.sh", MEISTER_NOTIFY_CONTACT=value), [])
+                self.assertEqual(
+                    self.run_script("notify-tom.sh", MEISTER_NOTIFY_CONTACT=value), []
+                )
 
     def test_ship_opt_in_does_not_authorize_contact(self):
         calls = self.run_script("auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP="1")
@@ -78,16 +93,22 @@ class ReleaseGuards(unittest.TestCase):
         self.assertFalse((self.root / ".auto-ship.lock").exists())
 
     def test_contact_opt_in_does_not_authorize_ship(self):
-        self.assertEqual(self.run_script("auto-ship.sh", MEISTER_NOTIFY_CONTACT="1"), [])
+        self.assertEqual(
+            self.run_script("auto-ship.sh", MEISTER_NOTIFY_CONTACT="1"), []
+        )
 
     def test_ship_off_switch_overrides_opt_in_without_artifacts(self):
         (self.root / ".no-auto-ship").touch()
-        self.assertEqual(self.run_script("auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP="1"), [])
+        self.assertEqual(
+            self.run_script("auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP="1"), []
+        )
         self.assertFalse((self.root / "build").exists())
 
     def test_contact_off_switch_overrides_opt_in(self):
         (self.root / ".no-tom-notify").touch()
-        self.assertEqual(self.run_script("notify-tom.sh", MEISTER_NOTIFY_CONTACT="1"), [])
+        self.assertEqual(
+            self.run_script("notify-tom.sh", MEISTER_NOTIFY_CONTACT="1"), []
+        )
         self.assertFalse((self.root / "build").exists())
 
     def test_contact_opt_in_passes_untrusted_message_as_argument(self):
@@ -101,7 +122,9 @@ class ReleaseGuards(unittest.TestCase):
         self.assertIn("on run argv", calls[0]["stdin"])
 
     def test_both_opt_ins_ship_then_contact(self):
-        calls = self.run_script("auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP="1", MEISTER_NOTIFY_CONTACT="1")
+        calls = self.run_script(
+            "auto-ship.sh", MEISTER_TESTFLIGHT_AUTO_SHIP="1", MEISTER_NOTIFY_CONTACT="1"
+        )
         self.assertEqual(sum(call["name"] == "ship.sh" for call in calls), 1)
         messages = [call for call in calls if call["stdin"]]
         self.assertEqual(len(messages), 1)
