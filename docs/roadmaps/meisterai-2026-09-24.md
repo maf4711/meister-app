@@ -28,7 +28,7 @@ Ziel: Die bereits veröffentlichten Wartungskorrekturen in der Meister-App zuver
 
 ## Prüfgrenzen
 
-Der vollständige macOS-Release-Build wurde im CPR erfolgreich für arm64 und x86_64 ausgeführt. Die vorhandene Abhängigkeit unter `~/Developer/meradOS-Design4` wurde über den dokumentierten Guard-Override geprüft und für den Build in der temporären Xcode-Projektkonfiguration gesetzt. Der kanonische relative Pfad bleibt eine Einschränkung für frische Checkouts. Für extern verteilbare notarisierten App-Binaries fehlt lokal ein Developer-ID-Zertifikat; der Release veröffentlicht den Quellcode. Die CI-Jobs werden nach dem Push geprüft.
+Der vollständige macOS-Release-Build wurde im CPR erfolgreich für arm64 und x86_64 ausgeführt. Die vorhandene Abhängigkeit unter `~/Developer/meradOS-Design4` wurde über den dokumentierten Guard-Override geprüft und für den Build in der temporären Xcode-Projektkonfiguration gesetzt. Der kanonische relative Pfad bleibt eine Einschränkung für frische Checkouts. Für extern verteilbare notarisierten App-Binaries fehlt lokal ein Developer-ID-Zertifikat; der Release veröffentlicht den Quellcode. Der nachfolgende Remote-Merge enthielt Referenzen auf drei fehlende Helferdateien. Diese wurden ergänzt und mit zwei zusätzlichen Offline-Swift-Harnesses geprüft (insgesamt 12 Python-Testfälle). Der zusammengeführte App-Release-Build für arm64 und x86_64 besteht. Prozess-Timeouts gelten für den direkt gestarteten Prozess; Prozessbaum-Abbruch und Ausgabemengenbegrenzung sind nicht implementiert. Die CI-Jobs werden nach dem finalen Push geprüft.
 
 ## Recap
 
