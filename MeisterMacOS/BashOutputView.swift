@@ -40,7 +40,7 @@ struct BashOutputView: View {
                    Button("Proceed", role: .destructive) { startRun() }
                },
                message: {
-                   Text("This runs `meister \(module.command.joined(separator: " "))` with destructive intent on your system.")
+                   Text("This runs `\(MeisterBash.shared.executableName) \(module.command.joined(separator: " "))` with destructive intent on your system.")
                })
     }
 
@@ -50,7 +50,7 @@ struct BashOutputView: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(module.title).font(.title2).bold()
-                Text("meister \(module.command.joined(separator: " "))")
+                Text("\(MeisterBash.shared.executableName) \(module.command.joined(separator: " "))")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -119,8 +119,8 @@ struct BashOutputView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundStyle(.orange)
-            Text("bash-meister not found").font(.title2).bold()
-            Text("The macOS GUI uses the bash-based `meister` CLI as its backend.\nInstall it first:")
+            Text("MeisterAI not found").font(.title2).bold()
+            Text("The macOS GUI uses the `MeisterAI` CLI (with `meister` fallback) as its backend.\nInstall it first:")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             Text("brew tap maf4711/meister\nbrew install meister")

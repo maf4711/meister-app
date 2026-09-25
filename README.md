@@ -221,3 +221,17 @@ New feature idea
 - **App Store** submission for iOS target.
 - **iCloud-aware AddressBook module**: auto-detect sync state, guide user through safe toggling.
 - **Contact dedup GUI on Mac** using the iOS engine (the logic is already shared).
+
+## MeisterAI integration and release controls
+
+The macOS bridge prefers `MeisterAI` from either Homebrew prefix and falls back to `meister` if needed. The command display follows the selected executable. Existing maintenance logic remains in the Homebrew backend.
+
+Run package tests with `swift test --package-path Packages/MeisterKit` and release-control tests with `python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v`. The latter run copied scripts with stubs; they never upload a build or send a message. CI runs package tests on macOS without a simulator or signing.
+
+Commit hooks do not ship by default. `MEISTER_TESTFLIGHT_AUTO_SHIP=1` explicitly enables the automatic TestFlight wrapper for an authorized invocation. Contact notification independently requires `MEISTER_NOTIFY_CONTACT=1`; enabling TestFlight alone never sends a message. Existing `.no-auto-ship` and `.no-tom-notify` files override those flags. Direct `scripts/ship.sh` remains an explicit TestFlight operation and is not part of ordinary CPR.
+
+Roadmap and evidence: [MeisterAI integration roadmap](docs/roadmaps/meisterai-2026-09-24.md).
+
+## Recap
+
+MeisterAI is the preferred CLI, release side effects require explicit activation, and CI exercises the native bridge and release controls.

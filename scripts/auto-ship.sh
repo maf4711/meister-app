@@ -3,15 +3,21 @@
 # Called by .git/hooks/post-commit when a commit lands on main.
 #
 # Off-switch:  touch .no-auto-ship   (in repo root)
-# Off again:   rm .no-auto-ship
+# Enable per invocation: MEISTER_TESTFLIGHT_AUTO_SHIP=1 ./scripts/auto-ship.sh
+# Removing the off-switch alone does not authorize shipping.
 
 set -uo pipefail
+# Default to no release side effects, including notifications and log creation.
+if [ "${MEISTER_TESTFLIGHT_AUTO_SHIP:-}" != "1" ]; then
+    echo "[auto-ship] requires MEISTER_TESTFLIGHT_AUTO_SHIP=1, skipping"
+    exit 0
+fi
+
 cd "$(dirname "$0")/.."
 
 REPO_ROOT="$PWD"
 LOCK="$REPO_ROOT/.auto-ship.lock"
 LOG="$REPO_ROOT/build/auto-ship.log"
-mkdir -p "$REPO_ROOT/build"
 
 notify() {
     local title="$1" msg="$2"
@@ -19,9 +25,11 @@ notify() {
 }
 
 if [ -f "$REPO_ROOT/.no-auto-ship" ]; then
-    echo "[auto-ship] .no-auto-ship present, skipping" >> "$LOG"
+    echo "[auto-ship] .no-auto-ship present, skipping"
     exit 0
 fi
+
+mkdir -p "$REPO_ROOT/build"
 
 if [ -f "$LOCK" ]; then
     PID=$(cat "$LOCK" 2>/dev/null || echo "")
