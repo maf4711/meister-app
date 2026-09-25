@@ -38,12 +38,13 @@ public struct MeisterBash: Sendable {
     }
 
     /// Run `meister <subcommand...>`, capture stdout/stderr, return structured result.
-    public func run(_ args: [String], stdin: String? = nil) async throws -> RunResult {
+    public func run(_ args: [String], stdin: String? = nil, timeout: TimeInterval = 300,
+                    onOutput: (@Sendable (ShellResult) -> Void)? = nil) async throws -> RunResult {
         guard case .installed(let url) = resolve() else {
             throw MeisterBashError.notInstalled
         }
         let argv = [url.path] + args
-        let shell = try await Shell.run(argv, stdin: stdin)
+        let shell = try await Shell.run(argv, stdin: stdin, timeout: timeout, onOutput: onOutput)
         return RunResult(status: shell.status, stdout: shell.stdout, stderr: shell.stderr)
     }
 
