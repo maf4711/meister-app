@@ -10,6 +10,8 @@ struct BashOutputView: View {
     @State private var hostInput: String = ""
     @State private var bashInstalled: Bool = true
     @State private var showConfirm: Bool = false
+    @State private var runTask: Task<Void, Never>?
+    @State private var runID = UUID()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -27,14 +29,15 @@ struct BashOutputView: View {
             errorText = ""
             exitStatus = nil
             if bashInstalled && !module.runsLive && !module.takesHostInput && !module.destructive {
-                await run()
+                startRun()
             }
         }
+        .onDisappear { runTask?.cancel() }
         .alert("Run \(module.title)?",
                isPresented: $showConfirm,
                actions: {
                    Button("Cancel", role: .cancel) {}
-                   Button("Proceed", role: .destructive) { Task { await run() } }
+                   Button("Proceed", role: .destructive) { startRun() }
                },
                message: {
                    Text("This runs `\(MeisterBash.shared.executableName) \(module.command.joined(separator: " "))` with destructive intent on your system.")
@@ -57,11 +60,14 @@ struct BashOutputView: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
             }
+            if isRunning {
+                Button("Abbrechen", role: .cancel) { runTask?.cancel() }
+            }
             Button {
                 if module.destructive {
                     showConfirm = true
                 } else {
-                    Task { await run() }
+                    startRun()
                 }
             } label: {
                 Label(isRunning ? "Running…" : (module.destructive ? "Run (destructive)" : "Run"),
@@ -130,7 +136,17 @@ struct BashOutputView: View {
 
     // MARK: - Execution
 
-    private func run() async {
+    @MainActor
+    private func startRun() {
+        guard !isRunning else { return }
+        let id = UUID()
+        runID = id
+        isRunning = true
+        runTask = Task { await run(id: id) }
+    }
+
+    @MainActor
+    private func run(id: UUID) async {
         isRunning = true
         output = ""
         errorText = ""
@@ -142,12 +158,21 @@ struct BashOutputView: View {
         if module.id == "disk" { args.append(NSHomeDirectory()) }
 
         do {
-            let result = try await MeisterBash.shared.run(args)
+            let result = try await MeisterBash.shared.run(args, timeout: 300) { update in
+                Task { @MainActor in
+                    guard runID == id, isRunning else { return }
+                    output = update.stdout
+                    errorText = update.stderr
+                }
+            }
             output = result.stdout
             errorText = result.stderr
             exitStatus = result.status
+        } catch is CancellationError {
+            errorText += "\nAbgebrochen. Bereits ausgeführte Änderungen werden dadurch nicht rückgängig gemacht."
+            exitStatus = -1
         } catch {
-            errorText = error.localizedDescription
+            errorText += "\n" + error.localizedDescription
             exitStatus = -1
         }
     }
