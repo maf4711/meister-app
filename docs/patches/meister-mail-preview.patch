@@ -1,0 +1,268 @@
+--- a/lib/mail/engine.mjs
++++ b/lib/mail/engine.mjs
+@@ -64,7 +64,9 @@
+ }
+ 
+ export class MegasmartEngine {
+-  constructor(mail, stateDir, { previewLimit = Infinity, verificationLimit = Infinity, persist = durableJSON, onProgress = () => {}, classifier, localHeaders, previewReader } = {}) {
++  constructor(mail, stateDir, { previewLimit = Infinity, previewPageSize = 100, verificationLimit = Infinity, persist = durableJSON, onProgress = () => {}, classifier, localHeaders, previewReader } = {}) {
++    if (!Number.isInteger(previewPageSize) || previewPageSize < 1 || previewPageSize > 100) throw new Error('Preview page size must be between 1 and 100');
++    this.previewPageSize = previewPageSize;
+     this.previewReader = previewReader;
+     this.classifier = classifier;
+     this.onProgress = onProgress;
+@@ -167,8 +169,14 @@
+     const items = [];
+     const startedAt = performance.now();
+     let readMilliseconds = 0, modelMilliseconds = 0;
++    const report = activity => this.onProgress({ phase: 'preview', activity, checked: items.length, total: listing.messages.length,
++      elapsedMs: Math.round(performance.now() - startedAt), readMs: Math.round(readMilliseconds), modelMs: Math.round(modelMilliseconds),
++      localReads: this.previewReader?.stats?.localReads, unavailableReads: this.previewReader?.stats?.unavailableReads });
++    report('Mail lesen');
++    // Pool sparse candidates across four native batches so both FM workers can
++    // stay busy. Native reads remain capped at 25; read-ahead remains one page.
+     const pages = [];
+-    for (let base = 0; base < listing.messages.length; base += 25) pages.push(listing.messages.slice(base, base + 25));
++    for (let base = 0; base < listing.messages.length; base += this.previewPageSize) pages.push(listing.messages.slice(base, base + this.previewPageSize));
+     const prepared = readAhead(pages, async page => {
+       const eligible = page.filter(row => {
+         const memory = this.decisions[senderKey(account, row.sender)];
+@@ -185,17 +193,19 @@
+         const detail = details.get(row.id);
+         return detail && detail.body.trim() && !(policy ? newsletterDecision({ ...row, ...detail }, detail, policy, this.decisions[senderKey(account, row.sender)]) : classify(row, detail)).protected;
+       });
++      report(this.classifier && modelRows.length ? `FM prüft ${modelRows.length}` : 'Mail lesen');
+       const modelStarted = performance.now();
+       const classified = this.classifier && modelRows.length
+         ? await this.classifier.classify(modelRows.map(row => ({ ...row, ...details.get(row.id) }))) : [];
+       modelMilliseconds += performance.now() - modelStarted;
+-      if (this.classifier && (classified.length !== modelRows.length || new Set(classified.map(r => r.id)).size !== modelRows.length)) throw new Error('Incomplete Apple FM classification');
++      if (this.classifier && (classified.length !== modelRows.length || new Set(classified.map(r => r.id)).size !== modelRows.length || classified.some(r => !modelRows.some(row => row.id === r.id)))) throw new Error('Incomplete Apple FM classification');
+       const classifications = new Map(classified.map(r => [r.id, r]));
+       // Local files can establish KEEP only. Every possible move must be checked
+       // against the current, explicitly scoped native message before planning it.
+       const localMoves = modelRows.filter(row => details.get(row.id)?.localPreview === true &&
+         classifications.get(row.id)?.category === 'newsletter' && classifications.get(row.id)?.safeToTrash === true);
+       if (localMoves.length) {
++        report('Mail bestätigt Kandidaten');
+         const confirmationStarted = performance.now();
+         const nativeDetails = await this.batchDetails(account, mailbox, localMoves);
+         readMilliseconds += performance.now() - confirmationStarted;
+@@ -215,6 +225,7 @@
+           details.set(row.id, native);
+         }
+         if (changed.length) {
++          report(`FM bestätigt ${changed.length}`);
+           const confirmationModelStarted = performance.now();
+           const verified = await this.classifier.classify(changed);
+           modelMilliseconds += performance.now() - confirmationModelStarted;
+@@ -251,9 +262,7 @@
+       items.push({ id: randomUUID(), messageID: row.id, sender: row.sender, subject: row.subject, ...(policy ? { dateReceived: row.dateReceived } : {}),
+         ...decision, ...(detail?.localUnavailable ? { localUnavailable: true } : {}), ...(classification ? { classification } : {}), status: 'pending', ...(detail && !detail.localPreview ? { fingerprint: identity(row, detail), rfcMessageId: detail.rfcMessageId } : {}) });
+     }
+-      this.onProgress({ phase: 'preview', checked: items.length, total: listing.messages.length,
+-        elapsedMs: Math.round(performance.now() - startedAt), readMs: Math.round(readMilliseconds), modelMs: Math.round(modelMilliseconds),
+-        localReads: this.previewReader?.stats?.localReads, unavailableReads: this.previewReader?.stats?.unavailableReads });
++      report(items.length === listing.messages.length ? 'Prüfung abgeschlossen' : 'Mail lesen');
+     }
+     const job = { id: randomUUID(), account, mailbox, createdAt: new Date().toISOString(), status: 'preview', items, scanned: items.length, hasMore: listing.hasMore, offset, ...(listing.source ? { source: listing.source, headersScanned: listing.headersScanned } : {}), ...(policy ? { policy } : {}) };
+     await this.save(job); this.jobs.set(job.id, job); return job;
+--- /dev/null
++++ b/lib/mail/progress.mjs
+@@ -0,0 +1,40 @@
++// Keep terminal output bounded while long Mail/FM requests are in flight.
++export function createProgressReporter({ stream = process.stderr, now = () => performance.now(),
++  schedule = setInterval, unschedule = clearInterval } = {}) {
++  let latest, receivedAt = 0, lastWritten = -Infinity, lastPhase, lastCompleted = false, timer, closed = false;
++  const render = (force = false) => {
++    if (!latest || closed) return;
++    const time = now();
++    if (!force && time - lastWritten < (stream.isTTY ? 1000 : 10000)) return;
++    const count = latest.checked ?? latest.moved ?? 0;
++    const elapsed = latest.elapsedMs === undefined ? '' : ` · ${Math.floor((latest.elapsedMs + time - receivedAt) / 1000)}s`;
++    const percent = latest.total ? Math.floor(count / latest.total * 100) : 100;
++    const activity = latest.activity ? ` · ${latest.activity}` : '';
++    const local = latest.localReads === undefined ? '' : ` · lokal ${latest.localReads} · unvollständig ${latest.unavailableReads ?? 0}`;
++    let line = `${latest.phase}: ${count}/${latest.total} (${percent}%)${elapsed}${activity}${local}`;
++    if (stream.isTTY) {
++      const width = stream.columns || 120;
++      if (line.length >= width) line = line.slice(0, Math.max(0, width - 2)) + '…';
++      stream.write(`\r\x1b[2K${line}`);
++    } else stream.write(line + '\n');
++    lastWritten = time;
++  };
++  return {
++    update(progress) {
++      if (closed) return;
++      const count = progress.checked ?? progress.moved ?? 0;
++      const complete = count === progress.total;
++      const force = progress.phase !== lastPhase || (complete && !lastCompleted);
++      latest = progress; receivedAt = now();
++      lastPhase = progress.phase; lastCompleted = complete;
++      render(force);
++      if (!timer) { timer = schedule(() => render(), 1000); timer.unref?.(); }
++    },
++    close() {
++      if (closed) return;
++      if (timer) unschedule(timer);
++      if (latest && stream.isTTY) stream.write('\n');
++      closed = true;
++    },
++  };
++}
+--- a/scripts/megasmart.mjs
++++ b/scripts/megasmart.mjs
+@@ -4,6 +4,7 @@
+ import { pathToFileURL } from 'node:url';
+ import { localNewsletterHeaders } from '../lib/mail/local-index.mjs';
+ import { KeepCache } from '../lib/mail/keep-cache.mjs';
++import { createProgressReporter } from '../lib/mail/progress.mjs';
+ import { MegasmartEngine } from '../lib/mail/engine.mjs';
+ import { lockState, jobs, desktopFence, lockDesktop, savedKeepDecisions } from '../lib/mail/state.mjs';
+ 
+@@ -75,15 +76,14 @@
+   const release = await lockState(directory);
+   let releaseDesktop;
+   let engine; let classifier; let interrupted = false;
++  const progressReporter = createProgressReporter();
+   const interrupt = () => { interrupted = true; if (engine?.running) engine.cancellations.add(engine.running); };
+   process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
+   try {
+     if (mutating) releaseDesktop = await lockDesktop();
+     const onProgress = progress => {
+       if (interrupted) throw new Error('Abgebrochen; gespeicherten Jobstatus prüfen.');
+-      const timing = progress.elapsedMs === undefined ? '' : ` | ${Math.round(progress.elapsedMs / 1000)}s, Mail ${Math.round(progress.readMs / 1000)}s, FM ${Math.round(progress.modelMs / 1000)}s (überlappend)`;
+-      const local = progress.localReads === undefined ? '' : `, ${progress.localReads} lokal gelesen, ${progress.unavailableReads ?? 0} lokal nicht vollständig`;
+-      console.error(`${progress.phase}: ${progress.checked ?? progress.moved}/${progress.total}${timing}${local}`);
++      progressReporter.update(progress);
+     };
+     if (['preview', 'run'].includes(o.command)) {
+       const { MailClassifier } = await import('../lib/mail/fm-classifier.mjs');
+@@ -127,9 +127,11 @@
+       await desktopFence();
+       await engine.apply(job.id); await engine.task;
+     }
++    progressReporter.close();
+     emit({ ...summary(job), modelKeepCacheHits: classifier?.hits ?? 0, localContent: previewReader?.stats });
+     if (mutating && job.status !== 'completed') process.exitCode = 1;
+   } finally {
++    progressReporter.close();
+     process.off('SIGINT', interrupt); process.off('SIGTERM', interrupt);
+     try { classifier?.close(); }
+     finally { try { if (releaseDesktop) await releaseDesktop(); } finally { await release(); } }
+--- /dev/null
++++ b/tests/mail-preview-performance.test.mjs
+@@ -0,0 +1,113 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { MegasmartEngine } from '../lib/mail/engine.mjs';
++import { MailClassifier } from '../lib/mail/fm-classifier.mjs';
++import { createProgressReporter } from '../lib/mail/progress.mjs';
++
++function output(tty = false) {
++  let clock = 0, tick, stopped = 0;
++  const writes = [];
++  const reporter = createProgressReporter({
++    stream: { isTTY: tty, columns: 200, write: s => writes.push(s) },
++    now: () => clock,
++    schedule: fn => { tick = fn; return { unref() {} }; },
++    unschedule: () => stopped++,
++  });
++  return { reporter, writes, advance(ms) { clock += ms; tick(); }, get stopped() { return stopped; } };
++}
++test('rapid updates are bounded; completion and phase transitions always print', () => {
++  const { reporter, writes } = output();
++  for (let checked = 0; checked <= 13258; checked++) reporter.update({ phase: 'preview', checked, total: 13258 });
++  assert.equal(writes.length, 2);
++  assert.match(writes[1], /13258\/13258 \(100%\)/);
++  reporter.update({ phase: 'apply', moved: 0, total: 10 });
++  assert.equal(writes.length, 3);
++  reporter.close();
++});
++test('FM waits remain visible without inventing completed work', () => {
++  const o = output();
++  o.reporter.update({ phase: 'preview', activity: 'FM prüft 4', checked: 2975, total: 13258, elapsedMs: 7000 });
++  o.advance(15000);
++  assert.match(o.writes[1], /2975\/13258.*22s · FM prüft 4/);
++  assert.ok(o.writes.every(s => !s.includes('\x1b')));
++  o.reporter.close(); o.reporter.close();
++  assert.equal(o.stopped, 1);
++  o.advance(15000);
++  assert.equal(o.writes.length, 2);
++});
++test('TTY rewrites one line and closes it once', () => {
++  const o = output(true);
++  o.reporter.update({ phase: 'preview', checked: 0, total: 100 });
++  o.advance(1000);
++  assert.ok(o.writes.every(s => s.startsWith('\r\x1b[2K') && !s.includes('\n')));
++  o.reporter.close(); o.reporter.close();
++  assert.equal(o.writes.at(-1), '\n');
++  assert.equal(o.writes.length, 3);
++});
++
++async function preview({ pageSize = 100, unavailable = false, move = false, foreign = false } = {}) {
++  const rows = Array.from({ length: 100 }, (_, n) => ({ id: String(n + 1), subject: 'Weekly newsletter',
++    sender: 'News <news@example.test>', dateReceived: '2020-01-01T00:00:00Z', isFlagged: n % 25 !== 0 }));
++  let launches = 0, nativeReads = 0, largestRead = 0;
++  const phases = [];
++  const detail = (id, local) => ({ ...rows[Number(id) - 1], body: unavailable ? '' : 'Weekly newsletter roundup',
++    rfcMessageId: unavailable ? '' : `${id}@example.test`, localPreview: local, ...(unavailable ? { localUnavailable: true } : {}) });
++  const classifier = new MailClassifier({ helperPath: '/fake', runner: async (file, args, { input }) => {
++    launches++;
++    const batch = JSON.parse(input).rows;
++    return { stdout: JSON.stringify({ model: 'apple-on-device', policyVersion: 'meister.mail/v1',
++      results: batch.map(row => ({ id: foreign ? 'wrong' : row.id, category: move ? 'newsletter' : 'other', safeToTrash: move, reason: 'fixture' })) }) };
++  } });
++  classifier.availableChecked = true;
++  const mail = { call: async name => {
++    assert.equal(name, 'list-mailboxes'); return { mailboxes: [{ name: 'Trash' }] };
++  }, readMessages: async (account, mailbox, ids) => { nativeReads += ids.length; return ids.map(id => detail(id, false)); } };
++  const previewReader = { readMessages: async (account, mailbox, ids) => {
++    largestRead = Math.max(largestRead, ids.length); assert.ok(ids.length <= 25);
++    return ids.map(id => detail(id, true));
++  } };
++  const engine = new MegasmartEngine(mail, '/unused', { previewPageSize: pageSize, classifier, previewReader,
++    persist: async () => {}, localHeaders: async () => ({ messages: rows, hasMore: false, source: 'local-mail-index' }),
++    onProgress: p => phases.push(p.activity) });
++  const job = await engine.preview('Fixture', 'INBOX', undefined, 'Trash');
++  return { job, launches, nativeReads, largestRead, phases };
++}
++test('sparse FM candidates use half as many helper launches with identical decisions', async () => {
++  const old = await preview({ pageSize: 25 }), next = await preview();
++  assert.equal(old.launches, 4); assert.equal(next.launches, 2);
++  const decisions = job => job.items.map(({ id, ...item }) => item);
++  assert.deepEqual(decisions(old.job), decisions(next.job));
++  assert.equal(next.nativeReads, 0);
++  assert.ok(next.phases.includes('FM prüft 4'));
++});
++test('unavailable content stays protected without FM or native fetch', async () => {
++  const { job, launches, nativeReads } = await preview({ unavailable: true });
++  assert.equal(launches, 0); assert.equal(nativeReads, 0);
++  assert.ok(job.items.every(i => i.action === 'keep' && i.protected));
++  assert.equal(job.items.filter(i => i.localUnavailable).length, 4);
++});
++test('every local move candidate still receives native identity confirmation', async () => {
++  const { job, nativeReads } = await preview({ move: true });
++  assert.equal(nativeReads, 4);
++  const moves = job.items.filter(i => i.action === 'move');
++  assert.equal(moves.length, 4);
++  assert.ok(moves.every(i => i.fingerprint && i.rfcMessageId));
++});
++test('foreign model identities abort the preview', async () => {
++  await assert.rejects(preview({ foreign: true }), /Invalid local mail classification result/);
++});
++test('page size stays bounded', () => {
++  for (const size of [0, -1, 101, Infinity, 1.5]) assert.throws(() => new MegasmartEngine({}, '', { previewPageSize: size }), /page size/);
++});
++
++test('engine independently rejects a classifier returning foreign IDs', async () => {
++  const row = { id: '1', subject: 'Weekly newsletter', sender: 'News <news@example.test>',
++    dateReceived: '2020-01-01T00:00:00Z', isFlagged: false };
++  const engine = new MegasmartEngine({ call: async () => ({ mailboxes: [{ name: 'Trash' }] }) }, '/unused', {
++    persist: async () => assert.fail('Invalid result must not be saved'),
++    localHeaders: async () => ({ messages: [row], hasMore: false }),
++    previewReader: { readMessages: async () => [{ ...row, body: 'newsletter', rfcMessageId: '1@example.test', localPreview: true }] },
++    classifier: { classify: async () => [{ id: 'foreign', category: 'other', safeToTrash: false }] },
++  });
++  await assert.rejects(engine.preview('Fixture', 'INBOX', undefined, 'Trash'), /Incomplete Apple FM classification/);
++});
