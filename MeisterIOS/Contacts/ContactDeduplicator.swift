@@ -8,7 +8,7 @@ enum ContactDeduplicator {
         return result
     }
 
-    /// Async version that emits progress during the O(n²) name-similarity pass,
+    /// Async version that emits progress during the name-similarity pass,
     /// so the UI can show "fuzzy name matching — 240/1000".
     static func dedupe(
         _ items: [ContactItem],
@@ -29,38 +29,61 @@ enum ContactDeduplicator {
         collector: ([ContactGroup]) -> Void
     ) -> Int {
         var parent = Array(0..<items.count)
-        func find(_ i: Int) -> Int { parent[i] == i ? i : { parent[i] = find(parent[i]); return parent[i] }() }
+        var sizes = [Int](repeating: 1, count: items.count)
+        func find(_ i: Int) -> Int {
+            var root = i
+            while parent[root] != root {
+                parent[root] = parent[parent[root]]
+                root = parent[root]
+            }
+            return root
+        }
         func union(_ i: Int, _ j: Int) {
-            let (ri, rj) = (find(i), find(j)); if ri != rj { parent[ri] = rj }
+            var (ri, rj) = (find(i), find(j))
+            guard ri != rj else { return }
+            if sizes[ri] < sizes[rj] { swap(&ri, &rj) }
+            parent[rj] = ri
+            sizes[ri] += sizes[rj]
         }
 
         progress(0.05, "Indexing phone numbers")
-        var phoneIdx: [String: [Int]] = [:]
+        var phoneIdx: [String: Int] = [:]
         for (i, c) in items.enumerated() {
-            for p in c.phones { phoneIdx[p, default: []].append(i) }
-        }
-        for (_, group) in phoneIdx where group.count > 1 {
-            for j in 1..<group.count { union(group[0], group[j]) }
+            for p in c.phones {
+                if let first = phoneIdx[p] { union(first, i) }
+                else { phoneIdx[p] = i }
+            }
         }
 
         progress(0.15, "Indexing email addresses")
-        var emailIdx: [String: [Int]] = [:]
+        var emailIdx: [String: Int] = [:]
         for (i, c) in items.enumerated() {
-            for e in c.emails { emailIdx[e, default: []].append(i) }
-        }
-        for (_, group) in emailIdx where group.count > 1 {
-            for j in 1..<group.count { union(group[0], group[j]) }
+            for e in c.emails {
+                if let first = emailIdx[e] { union(first, i) }
+                else { emailIdx[e] = i }
+            }
         }
 
         // Fuzzy name matching — the expensive part. Cap at 5000 to stay responsive.
         let named = items.enumerated().filter { !$0.element.fullName.isEmpty }
         if named.count <= 5000 {
+            let prepared = named.map { FuzzyMatcher.PreparedName($0.element.fullName) }
+            var tokenIndex: [String: [Int]] = [:]
+            for (i, name) in prepared.enumerated() {
+                for token in name.tokens { tokenIndex[token, default: []].append(i) }
+            }
             let pairs = named.count
             var done = 0
             for i in 0..<named.count {
-                for j in (i + 1)..<named.count {
-                    let (a, b) = (named[i].element, named[j].element)
-                    if FuzzyMatcher.nameSimilarity(a.fullName, b.fullName) >= 0.85 {
+                // With no shared token the score is at most 0.4, below 0.85.
+                // Keep candidates only for this contact, not every pair in the library.
+                var candidates = Set<Int>()
+                for token in prepared[i].tokens {
+                    for j in tokenIndex[token, default: []] where j > i { candidates.insert(j) }
+                }
+                for j in candidates.sorted() {
+                    guard find(named[i].offset) != find(named[j].offset) else { continue }
+                    if FuzzyMatcher.namesMatch(prepared[i], prepared[j], threshold: 0.85) {
                         union(named[i].offset, named[j].offset)
                     }
                 }
