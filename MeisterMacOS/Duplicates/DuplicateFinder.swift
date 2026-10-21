@@ -12,27 +12,39 @@ struct DuplicateGroup: Identifiable, Hashable {
 actor DuplicateFinder {
     /// Minimum file size to consider — below this, hashing cost exceeds reclaim value.
     static let minSize: Int64 = 1_048_576  // 1 MB
-    /// Hard cap per file we'll hash to avoid OOM on multi-GB videos.
+    /// Fixed read buffer size keeps hashing memory bounded for multi-GB videos.
     static let hashChunk: Int = 256 * 1024  // 256 KB chunks
+    /// Cheap rejection for large same-size files; never used to confirm duplicates.
+    static let prefixBytes: Int = 64 * 1024
 
     /// Find duplicates under the given root URLs.
-    /// Two-stage: bucket by size, then SHA256 only same-size files.
+    /// Bucket by size and prefix, then confirm every match with a full SHA256.
     func find(in roots: [URL], minSize: Int64 = DuplicateFinder.minSize) async -> [DuplicateGroup] {
         var seen = Set<URL>()
         var sizeBuckets: [Int64: [URL]] = [:]
 
         for root in roots {
-            for url in enumerate(root) {
-                guard !Task.isCancelled else { return [] }
-                guard seen.insert(url.standardizedFileURL.resolvingSymlinksInPath()).inserted,
-                      let bytes = try? size(of: url), bytes >= minSize else { continue }
+            guard !Task.isCancelled else { return [] }
+            enumerate(root) { url, bytes in
+                guard bytes >= minSize,
+                      seen.insert(url.standardizedFileURL.resolvingSymlinksInPath()).inserted else { return }
                 sizeBuckets[bytes, default: []].append(url)
             }
         }
 
         var groups: [DuplicateGroup] = []
         for (bytes, candidates) in sizeBuckets where candidates.count >= 2 {
-            let hashed = await hashAll(candidates)
+            guard !Task.isCancelled else { return [] }
+            var fullHashCandidates = candidates
+            if bytes > Self.prefixBytes {
+                let prefixes = await hashAll(candidates, prefixOnly: true)
+                guard !Task.isCancelled else { return [] }
+                fullHashCandidates = Dictionary(grouping: prefixes, by: \.hash)
+                    .values.filter { $0.count >= 2 }.flatMap { $0.map(\.url) }
+            }
+            guard fullHashCandidates.count >= 2 else { continue }
+            let hashed = await hashAll(fullHashCandidates)
+            guard !Task.isCancelled else { return [] }
             let byHash = Dictionary(grouping: hashed) { $0.hash }
             for (hash, entries) in byHash where entries.count >= 2 {
                 groups.append(DuplicateGroup(
@@ -47,31 +59,30 @@ actor DuplicateFinder {
 
     // MARK: - helpers
 
-    private nonisolated func enumerate(_ url: URL) -> [URL] {
-        let fm = FileManager.default
-        var isDir: ObjCBool = false
-        guard fm.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
-            return [url]
+    /// Consume entries as they are discovered; prefetch metadata once per file.
+    private nonisolated func enumerate(_ root: URL, visit: (URL, Int64) -> Void) {
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey]
+        func consume(_ url: URL) {
+            guard let values = try? url.resourceValues(forKeys: keys),
+                  values.isRegularFile == true, values.isSymbolicLink != true,
+                  let bytes = values.fileSize else { return }
+            visit(url, Int64(bytes))
         }
-        let opts: FileManager.DirectoryEnumerationOptions = [.skipsHiddenFiles, .skipsPackageDescendants]
-        guard let enumerator = fm.enumerator(
-            at: url,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: opts,
+        guard let values = try? root.resourceValues(forKeys: keys),
+              values.isSymbolicLink != true else { return }
+        guard values.isDirectory == true else {
+            consume(root)
+            return
+        }
+        guard let enumerator = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: Array(keys),
+            options: [.skipsHiddenFiles, .skipsPackageDescendants],
             errorHandler: { _, _ in true }
-        ) else { return [] }
-        var out: [URL] = []
-        for case let f as URL in enumerator {
-            if (try? f.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true {
-                out.append(f)
-            }
+        ) else { return }
+        while !Task.isCancelled, let url = enumerator.nextObject() as? URL {
+            consume(url)
         }
-        return out
-    }
-
-    private nonisolated func size(of url: URL) throws -> Int64 {
-        let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
-        return Int64((attrs[.size] as? NSNumber)?.int64Value ?? 0)
     }
 
     private struct HashedFile {
@@ -79,19 +90,20 @@ actor DuplicateFinder {
         let hash: String
     }
 
-    private func hashAll(_ urls: [URL]) async -> [HashedFile] {
+    private func hashAll(_ urls: [URL], prefixOnly: Bool = false) async -> [HashedFile] {
         await withTaskGroup(of: HashedFile?.self) { group in
+            let limit = prefixOnly ? Self.prefixBytes : nil
             var iterator = urls.makeIterator()
             for _ in 0..<4 {
                 if let url = iterator.next() {
-                    group.addTask { Self.sha256(of: url).map { HashedFile(url: url, hash: $0) } }
+                    group.addTask { Self.sha256(of: url, byteLimit: limit).map { HashedFile(url: url, hash: $0) } }
                 }
             }
             var out: [HashedFile] = []
             for await h in group {
                 if let h { out.append(h) }
                 if !Task.isCancelled, let url = iterator.next() {
-                    group.addTask { Self.sha256(of: url).map { HashedFile(url: url, hash: $0) } }
+                    group.addTask { Self.sha256(of: url, byteLimit: limit).map { HashedFile(url: url, hash: $0) } }
                 }
             }
             return out
@@ -99,20 +111,29 @@ actor DuplicateFinder {
     }
 
     static func sha256(of url: URL) -> String? {
+        sha256(of: url, byteLimit: nil)
+    }
+
+    private static func sha256(of url: URL, byteLimit: Int?) -> String? {
+        guard !Task.isCancelled else { return nil }
         guard let stream = InputStream(url: url) else { return nil }
         stream.open()
         defer { stream.close() }
 
         var hasher = SHA256()
-        var buf = [UInt8](repeating: 0, count: hashChunk)
-        while true {
+        var remaining = byteLimit ?? Int.max
+        var buf = [UInt8](repeating: 0, count: min(hashChunk, remaining))
+        while remaining > 0 {
             if Task.isCancelled { return nil }
             let read = buf.withUnsafeMutableBufferPointer { ptr -> Int in
-                stream.read(ptr.baseAddress!, maxLength: ptr.count)
+                stream.read(ptr.baseAddress!, maxLength: min(ptr.count, remaining))
             }
             if read < 0 { return nil }
             if read == 0 { break }
-            hasher.update(data: Data(buf.prefix(read)))
+            remaining -= read
+            buf.withUnsafeBytes { bytes in
+                hasher.update(bufferPointer: UnsafeRawBufferPointer(rebasing: bytes[..<read]))
+            }
         }
         let digest = hasher.finalize()
         return digest.map { String(format: "%02x", $0) }.joined()
