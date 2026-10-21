@@ -171,49 +171,96 @@ actor SimilarityClustering {
     ) -> [[Int]] {
         guard count > 1 else { return [] }
 
-        // Cache the pairwise distances once — `distance` may be expensive (Vision).
-        var dist = [Float](repeating: 0, count: count * count)
+        // Store one triangle: linkage is symmetric and the diagonal is unused.
+        // Slots are reused after merges, so the matrix never grows.
+        let offsets = (0..<count).map { $0 * ($0 - 1) / 2 }
+        var dist = [Float](repeating: 0, count: count * (count - 1) / 2)
+        func index(_ a: Int, _ b: Int) -> Int {
+            offsets[max(a, b)] + min(a, b)
+        }
         for i in 0..<count {
             for j in (i + 1)..<count {
                 let d = distance(i, j)
-                dist[i * count + j] = d
-                dist[j * count + i] = d
+                // A failed/nonfinite distance must never imply duplicate photos.
+                dist[index(i, j)] = d.isFinite ? max(0, d) : .infinity
             }
         }
 
-        // Complete-link agglomerative merge on the cached matrix. A merge of two
-        // clusters is valid iff their max cross-pair distance is < threshold; by
-        // induction every cluster therefore stays within the diameter cap.
         var clusters: [[Int]] = (0..<count).map { [$0] }
-        func completeLink(_ a: [Int], _ b: [Int]) -> Float {
-            var m: Float = 0
-            for x in a { for y in b { let v = dist[x * count + y]; if v > m { m = v } } }
-            return m
+        var representatives = Array(0..<count)
+        // Preserve the original order: remove both clusters and append the merge.
+        // On ties, (earlier representative, later representative) is significant.
+        var active = Array(0..<count)
+        var nearest = [Int](repeating: -1, count: count)
+        var needsRescan = [Bool](repeating: false, count: count)
+
+        func betterNeighbor(_ candidate: Int, than current: Int, for source: Int) -> Bool {
+            let d = dist[index(source, candidate)]
+            guard d < threshold else { return false }
+            guard current >= 0 else { return true }
+            let previous = dist[index(source, current)]
+            return d < previous || (d == previous && representatives[candidate] < representatives[current])
         }
 
+        func closest(after position: Int) -> Int {
+            let source = active[position]
+            var best = -1
+            for candidate in active[(position + 1)...] {
+                if betterNeighbor(candidate, than: best, for: source) { best = candidate }
+            }
+            return best
+        }
+
+        for position in active.indices { nearest[active[position]] = closest(after: position) }
+
+        // A global minimum must be a row minimum. Only rows whose closest cluster
+        // was merged need rescanning; other rows just consider the appended merge.
         while true {
-            var bestI = -1, bestJ = -1
-            var bestDist = Float.greatestFiniteMagnitude
-            for i in 0..<clusters.count {
-                for j in (i + 1)..<clusters.count {
-                    let cl = completeLink(clusters[i], clusters[j])
-                    guard cl < threshold else { continue }
-                    // Deterministic: smallest linkage first, tie-broken by representative.
-                    if cl < bestDist
-                        || (cl == bestDist
-                            && (clusters[i][0], clusters[j][0]) < (clusters[bestI][0], clusters[bestJ][0])) {
-                        bestDist = cl; bestI = i; bestJ = j
-                    }
+            var bestA = -1, bestB = -1
+            var bestDistance = Float.infinity
+            for a in active {
+                let b = nearest[a]
+                guard b >= 0 else { continue }
+                let d = dist[index(a, b)]
+                if bestA < 0 || d < bestDistance
+                    || (d == bestDistance && (representatives[a], representatives[b]) <
+                        (representatives[bestA], representatives[bestB])) {
+                    bestA = a; bestB = b; bestDistance = d
                 }
             }
-            if bestI < 0 { break }
-            let merged = (clusters[bestI] + clusters[bestJ]).sorted()
-            clusters.remove(at: bestJ)   // j > i — remove the higher index first
-            clusters.remove(at: bestI)
-            clusters.append(merged)
+            guard bestA >= 0 else { break }
+
+            // Complete linkage: D(A∪B,C) = max(D(A,C), D(B,C)). No need to
+            // revisit the original cross-pairs or recompute Vision distances.
+            for other in active where other != bestA && other != bestB {
+                let target = index(bestA, other)
+                let fromA = dist[target], fromB = dist[index(bestB, other)]
+                let merged = max(fromA, fromB)
+                if nearest[other] == bestA { needsRescan[other] = merged > fromA }
+                else if nearest[other] == bestB { needsRescan[other] = merged > fromB }
+                dist[target] = merged
+            }
+            clusters[bestA].append(contentsOf: clusters[bestB])
+            clusters[bestB] = []
+            representatives[bestA] = min(representatives[bestA], representatives[bestB])
+            active.removeAll { $0 == bestA || $0 == bestB }
+            active.append(bestA)
+            nearest[bestA] = -1
+            nearest[bestB] = -1
+
+            for position in active.indices.dropLast() {
+                let source = active[position]
+                if nearest[source] == bestA || nearest[source] == bestB {
+                    // If linkage stayed equal, the merge is still the best: its
+                    // representative is no larger than the removed neighbor's.
+                    nearest[source] = needsRescan[source] ? closest(after: position) : bestA
+                } else if betterNeighbor(bestA, than: nearest[source], for: source) {
+                    nearest[source] = bestA
+                }
+            }
         }
 
-        return clusters
+        return active.map { clusters[$0] }
             .filter { $0.count > 1 }
             .map { $0.sorted() }
             .sorted { $0[0] < $1[0] }
@@ -246,9 +293,9 @@ actor SimilarityClustering {
         var groups: [[T]] = []
         var current: [T] = [dated[0]]
         for item in dated.dropFirst() {
-            let prev = current.last!.creationDate!
+            let first = current[0].creationDate!
             let next = item.creationDate!
-            if next.timeIntervalSince(prev) <= window {
+            if next.timeIntervalSince(first) <= window {
                 current.append(item)
             } else {
                 if current.count > 1 { groups.append(current) }

@@ -42,6 +42,15 @@ final class CaptureWindowTests: XCTestCase {
         XCTAssertEqual(Set(groups[0].map(\.id)), ["apr2a", "apr2b"])
     }
 
+    func testAdjacentDatesCannotChainBeyondWindow() {
+        let start = Date(timeIntervalSince1970: 0)
+        let items = [0, 50, 100, 150].map {
+            Shot(id: String($0), creationDate: start.addingTimeInterval(Double($0)))
+        }
+        let groups = SimilarityClustering.splitByCaptureWindow(items, window: 60)
+        XCTAssertEqual(groups.map { $0.map(\.id) }, [["0", "50"], ["100", "150"]])
+    }
+
     func testMissingDatesNeverGroup() {
         let items = [
             Shot(id: "a", creationDate: nil),
