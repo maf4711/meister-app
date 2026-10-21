@@ -50,12 +50,6 @@ final class LargeFilesScanner: NSObject, ObservableObject {
         let q = NSMetadataQuery()
         q.searchScopes = scope
         q.predicate = makePredicate(minBytes: minBytes, olderThanDays: olderThanDays)
-        q.valueListAttributes = [
-            NSMetadataItemFSSizeKey,
-            NSMetadataItemLastUsedDateKey,
-            NSMetadataItemFSContentChangeDateKey,
-            NSMetadataItemContentTypeKey,
-        ]
         q.sortDescriptors = [NSSortDescriptor(key: NSMetadataItemFSSizeKey, ascending: false)]
 
         NotificationCenter.default.addObserver(
@@ -67,7 +61,7 @@ final class LargeFilesScanner: NSObject, ObservableObject {
 
         self.query = q
         self.isScanning = true
-        q.start()
+        if !q.start() { cancel() }
     }
 
     func cancel() {
@@ -80,10 +74,13 @@ final class LargeFilesScanner: NSObject, ObservableObject {
     }
 
     @objc private func queryFinished(_ note: Notification) {
-        guard let q = note.object as? NSMetadataQuery else { return }
+        guard let q = note.object as? NSMetadataQuery, q === query else { return }
         q.disableUpdates()
         var collected: [LargeFileItem] = []
-        for case let result as NSMetadataItem in (q.results) {
+        let count = q.resultCount
+        collected.reserveCapacity(count)
+        for index in 0..<count {
+            guard let result = q.result(at: index) as? NSMetadataItem else { continue }
             guard
                 let path = result.value(forAttribute: NSMetadataItemPathKey) as? String,
                 let size = (result.value(forAttribute: NSMetadataItemFSSizeKey) as? NSNumber)?.int64Value
@@ -97,26 +94,30 @@ final class LargeFilesScanner: NSObject, ObservableObject {
                 lastModified: result.value(forAttribute: NSMetadataItemFSContentChangeDateKey) as? Date
             ))
         }
+        q.stop()
         self.items = collected
         self.isScanning = false
         NotificationCenter.default.removeObserver(self, name: nil, object: q)
         self.query = nil
     }
 
-    private func makePredicate(minBytes: Int64, olderThanDays: Int?) -> NSPredicate {
+    func makePredicate(minBytes: Int64, olderThanDays: Int?) -> NSPredicate {
         var clauses: [NSPredicate] = [
             NSPredicate(format: "%K >= %lld", NSMetadataItemFSSizeKey, minBytes),
             NSPredicate(format: "%K != %@", NSMetadataItemContentTypeKey, "public.folder" as NSString),
         ]
         if let days = olderThanDays, days > 0 {
             let cutoff = Date(timeIntervalSinceNow: -Double(days) * 86_400)
-            // Use lastUsedDate when available; fall back to content-change date.
+            // A recent use OR modification makes the file fresh.
+            // Require at least one known date, and no recent date.
             let usedOld = NSPredicate(format: "%K < %@", NSMetadataItemLastUsedDateKey, cutoff as NSDate)
             let usedMissing = NSPredicate(format: "%K == nil", NSMetadataItemLastUsedDateKey)
             let modOld = NSPredicate(format: "%K < %@", NSMetadataItemFSContentChangeDateKey, cutoff as NSDate)
-            let dormant = NSCompoundPredicate(orPredicateWithSubpredicates: [
-                usedOld,
-                NSCompoundPredicate(andPredicateWithSubpredicates: [usedMissing, modOld]),
+            let modMissing = NSPredicate(format: "%K == nil", NSMetadataItemFSContentChangeDateKey)
+            let dormant = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSCompoundPredicate(orPredicateWithSubpredicates: [usedOld, usedMissing]),
+                NSCompoundPredicate(orPredicateWithSubpredicates: [modOld, modMissing]),
+                NSCompoundPredicate(orPredicateWithSubpredicates: [usedOld, modOld]),
             ])
             clauses.append(dormant)
         }
