@@ -11,13 +11,25 @@ APPEX="$APP/PlugIns/MeisterWidget.appex"
 STAGE=build/stage
 IPA_PATH=build/ipa/MeisterIOS.ipa
 PROF_DIR="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
-DIST_IDENT="Apple Distribution: Marco Foellmer (K63X3ZTV3Q)"
+DIST_IDENT="${MEISTER_DIST_IDENTITY:-Apple Distribution: Marco Foellmer (K63X3ZTV3Q)}"
 
 # Distribution provisioning profiles (update these when regenerating from Apple Developer portal)
 # Main app: com.merados.meister.ios
-APP_PROF="$PROF_DIR/cd8a9e93-68d4-4fff-a09f-2ff3b1485849.mobileprovision"
+APP_PROF="${MEISTER_APP_PROFILE:-$PROF_DIR/cd8a9e93-68d4-4fff-a09f-2ff3b1485849.mobileprovision}"
 # Widget extension: com.merados.meister.ios.widget
-EXT_PROF="$PROF_DIR/24e692da-bd73-4eaf-8dc8-25a44afc6e85.mobileprovision"
+EXT_PROF="${MEISTER_WIDGET_PROFILE:-$PROF_DIR/24e692da-bd73-4eaf-8dc8-25a44afc6e85.mobileprovision}"
+
+# Fail before archiving or staging when local signing prerequisites are missing.
+[ -r "$APP_PROF" ] || { echo "FATAL: app profile missing; set MEISTER_APP_PROFILE" >&2; exit 1; }
+[ -r "$EXT_PROF" ] || { echo "FATAL: widget profile missing; set MEISTER_WIDGET_PROFILE" >&2; exit 1; }
+if ! security find-identity -v -p codesigning | grep -F -- "$DIST_IDENT" >/dev/null; then
+    echo "FATAL: distribution signing identity missing; set MEISTER_DIST_IDENTITY" >&2
+    exit 1
+fi
+if [ "${1:-}" = "--preflight" ]; then
+    echo "Distribution profiles and signing identity are present"
+    exit 0
+fi
 
 # How to refresh:
 # 1. Go to https://developer.apple.com/account/resources/profiles/list
@@ -61,7 +73,7 @@ security cms -D -i "$EXT_PROF" 2>/dev/null \
 rm -f "$APP_ENT" "$EXT_ENT"
 
 # Verify
-codesign --verify --deep --strict "$STAGE/Payload/MeisterIOS.app" 2>&1 | head -3 || true
+codesign --verify --deep --strict "$STAGE/Payload/MeisterIOS.app"
 codesign -dv --verbose=1 "$STAGE/Payload/MeisterIOS.app" 2>&1 | grep -E "TeamIdentifier|Authority" | head -3
 
 echo "══ 4/4  Zipping IPA"

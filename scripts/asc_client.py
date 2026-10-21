@@ -27,8 +27,6 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-import jwt
-
 KEY_ID = os.environ.get("ASC_KEY_ID", "AA42M2D5C8")
 ISSUER_ID = os.environ.get("ASC_ISSUER_ID", "18daeaec-9343-4c57-9b01-481a7da981c6")
 KEY_PATH = Path(
@@ -42,6 +40,12 @@ BASE = "https://api.appstoreconnect.apple.com/v1"
 
 
 def token() -> str:
+    try:
+        import jwt
+    except ImportError as exc:
+        raise RuntimeError("Install release dependencies with: python3 -m pip install 'PyJWT[crypto]>=2.8,<3'") from exc
+    if not KEY_PATH.is_file():
+        raise RuntimeError("ASC key file is missing; set ASC_KEY_ID or ASC_KEY_PATH to an existing key")
     private_key = KEY_PATH.read_text()
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
@@ -72,7 +76,7 @@ def request(
         },
     )
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=30) as resp:
             raw = resp.read()
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
@@ -89,28 +93,43 @@ def find_app(bundle_id: str) -> dict:
     return items[0]
 
 
-def list_builds(app_id: str, limit: int = 5) -> list[dict]:
+def list_builds(app_id: str, limit: int = 5, version: str | None = None) -> list[dict]:
+    params = {"filter[app]": app_id, "sort": "-version", "limit": limit, "include": "buildBetaDetail"}
+    if version is not None:
+        params["filter[version]"] = version
     data = request(
         "GET",
         "/builds",
-        params={
-            "filter[app]": app_id,
-            "sort": "-version",
-            "limit": limit,
-            "include": "buildBetaDetail",
-        },
+        params=params,
     )
     return data.get("data", [])
 
 
 def latest_build_number(app_id: str) -> int:
-    builds = list_builds(app_id, limit=1)
-    if not builds:
-        return 0
-    try:
-        return int(builds[0]["attributes"]["version"])
-    except (ValueError, KeyError):
-        return 0
+    # Version strings and upload order do not guarantee the largest numeric build.
+    path = "/builds"
+    params = {"filter[app]": app_id, "limit": 200}
+    seen: set[str] = set()
+    highest = 0
+    while True:
+        if path in seen:
+            raise ValueError("Repeated ASC build page; cannot safely choose a build number")
+        seen.add(path)
+        page = request("GET", path, params=params)
+        builds = page.get("data")
+        if not isinstance(builds, list):
+            raise ValueError("ASC build response is missing its data list")
+        for build in builds:
+            version = build.get("attributes", {}).get("version")
+            if not isinstance(version, str) or not version.isascii() or not version.isdecimal():
+                raise ValueError("ASC returned a nonnumeric build version; refusing to reset the build number")
+            highest = max(highest, int(version))
+        next_url = page.get("links", {}).get("next")
+        if not next_url:
+            return highest
+        if not isinstance(next_url, str) or not next_url.startswith(BASE + "/"):
+            raise ValueError("Unexpected ASC pagination URL")
+        path, params = next_url[len(BASE):], None
 
 
 def build_beta_detail(build_id: str) -> dict:
@@ -123,7 +142,7 @@ def wait_until_processed(
 ) -> dict:
     start = time.time()
     while time.time() - start < timeout:
-        builds = list_builds(app_id, limit=5)
+        builds = list_builds(app_id, limit=5, version=target_version)
         if not builds:
             print("… no builds yet, waiting", flush=True)
             time.sleep(15)
@@ -325,16 +344,11 @@ def invite_tester(
             else:
                 raise
     if group_id:
-        try:
-            request(
-                "POST",
-                f"/betaGroups/{group_id}/relationships/betaTesters",
-                body={
-                    "data": [{"type": "betaTesters", "id": tester["id"]}],
-                },
-            )
-        except urllib.error.HTTPError:
-            pass  # Already in group — ignore.
+        request(
+            "POST",
+            f"/betaGroups/{group_id}/relationships/betaTesters",
+            body={"data": [{"type": "betaTesters", "id": tester["id"]}]},
+        )
     return tester
 
 
@@ -462,6 +476,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("status", help="List recent builds")
+    sub.add_parser("preflight", help="Validate signing credentials locally without API requests")
     sub.add_parser("next-build-number", help="Print the next build number (latest+1)")
 
     p_wait = sub.add_parser("wait", help="Poll until build is processed")
@@ -520,6 +535,10 @@ def main() -> int:
         p.add_argument("--bundle", default="com.merados.meister.ios")
 
     args = parser.parse_args()
+    if args.cmd == "preflight":
+        token()
+        print("ASC signing credentials are usable")
+        return 0
     app = find_app(args.bundle)
     app_id = app["id"]
 
@@ -598,10 +617,7 @@ def main() -> int:
         build = wait_until_processed(app_id, args.version)
         set_export_compliance(build["id"], uses_crypto=False)
         group = ensure_internal_group(app_id)
-        try:
-            attach_build_to_group(build["id"], group["id"])
-        except urllib.error.HTTPError:
-            pass  # Already attached.
+        attach_build_to_group(build["id"], group["id"])
         if args.notes:
             set_release_notes(build["id"], args.notes)
         print(

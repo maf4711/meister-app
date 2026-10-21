@@ -13,6 +13,11 @@ cd "$(dirname "$0")/.."
 
 NOTES="${1:-}"   # First arg: release notes (optional). Empty skips.
 
+echo "══ Preflight: local build and signing prerequisites"
+./scripts/ensure-design-system.sh
+python3 scripts/asc_client.py preflight
+./scripts/build_ipa.sh --preflight
+
 echo "══ 0/6  Resolving next build number"
 NEXT=$(python3 scripts/asc_client.py next-build-number)
 echo "   → build $NEXT"
