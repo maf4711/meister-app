@@ -46,17 +46,33 @@ class ReleasePreflightTests(unittest.TestCase):
             tool.chmod(0o755)
         self.app_profile = self.root / "app.mobileprovision"
         self.widget_profile = self.root / "widget.mobileprovision"
-        self.env = {**os.environ, "PATH": f"{self.root / 'bin'}:{os.defpath}",
-                    "PREFLIGHT_CALLS": str(self.calls), "MEISTER_DIST_IDENTITY": "Fixture Distribution",
-                    "MEISTER_APP_PROFILE": str(self.app_profile), "MEISTER_WIDGET_PROFILE": str(self.widget_profile)}
+        self.env = {
+            **os.environ,
+            "PATH": f"{self.root / 'bin'}:{os.defpath}",
+            "PREFLIGHT_CALLS": str(self.calls),
+            "MEISTER_DIST_IDENTITY": "Fixture Distribution",
+            "MEISTER_APP_PROFILE": str(self.app_profile),
+            "MEISTER_WIDGET_PROFILE": str(self.widget_profile),
+        }
 
     def run_script(self, script, *arguments, **env):
-        return subprocess.run(["/bin/bash", str(self.root / "scripts" / script), *arguments],
-                              env={**self.env, **env}, capture_output=True, text=True, timeout=10)
+        return subprocess.run(
+            ["/bin/bash", str(self.root / "scripts" / script), *arguments],
+            env={**self.env, **env},
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
 
     def assert_no_build(self):
-        calls = [json.loads(line) for line in self.calls.read_text().splitlines()] if self.calls.exists() else []
-        self.assertFalse(any(call["name"] in ("xcodegen", "xcodebuild") for call in calls))
+        calls = (
+            [json.loads(line) for line in self.calls.read_text().splitlines()]
+            if self.calls.exists()
+            else []
+        )
+        self.assertFalse(
+            any(call["name"] in ("xcodegen", "xcodebuild") for call in calls)
+        )
         self.assertFalse((self.root / "build").exists())
         self.assertEqual(self.project.read_text(), 'CURRENT_PROJECT_VERSION: "1"\n')
 
@@ -76,7 +92,9 @@ class ReleasePreflightTests(unittest.TestCase):
     def test_missing_identity_stops_before_staging(self):
         self.app_profile.write_text("fixture")
         self.widget_profile.write_text("fixture")
-        result = self.run_script("build_ipa.sh", "--preflight", PREFLIGHT_IDENTITY_MISSING="1")
+        result = self.run_script(
+            "build_ipa.sh", "--preflight", PREFLIGHT_IDENTITY_MISSING="1"
+        )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("MEISTER_DIST_IDENTITY", result.stderr)
         self.assert_no_build()

@@ -43,9 +43,13 @@ def token() -> str:
     try:
         import jwt
     except ImportError as exc:
-        raise RuntimeError("Install release dependencies with: python3 -m pip install 'PyJWT[crypto]>=2.8,<3'") from exc
+        raise RuntimeError(
+            "Install release dependencies with: python3 -m pip install 'PyJWT[crypto]>=2.8,<3'"
+        ) from exc
     if not KEY_PATH.is_file():
-        raise RuntimeError("ASC key file is missing; set ASC_KEY_ID or ASC_KEY_PATH to an existing key")
+        raise RuntimeError(
+            "ASC key file is missing; set ASC_KEY_ID or ASC_KEY_PATH to an existing key"
+        )
     private_key = KEY_PATH.read_text()
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
@@ -94,7 +98,12 @@ def find_app(bundle_id: str) -> dict:
 
 
 def list_builds(app_id: str, limit: int = 5, version: str | None = None) -> list[dict]:
-    params = {"filter[app]": app_id, "sort": "-version", "limit": limit, "include": "buildBetaDetail"}
+    params = {
+        "filter[app]": app_id,
+        "sort": "-version",
+        "limit": limit,
+        "include": "buildBetaDetail",
+    }
     if version is not None:
         params["filter[version]"] = version
     data = request(
@@ -113,7 +122,9 @@ def latest_build_number(app_id: str) -> int:
     highest = 0
     while True:
         if path in seen:
-            raise ValueError("Repeated ASC build page; cannot safely choose a build number")
+            raise ValueError(
+                "Repeated ASC build page; cannot safely choose a build number"
+            )
         seen.add(path)
         page = request("GET", path, params=params)
         builds = page.get("data")
@@ -121,15 +132,21 @@ def latest_build_number(app_id: str) -> int:
             raise ValueError("ASC build response is missing its data list")
         for build in builds:
             version = build.get("attributes", {}).get("version")
-            if not isinstance(version, str) or not version.isascii() or not version.isdecimal():
-                raise ValueError("ASC returned a nonnumeric build version; refusing to reset the build number")
+            if (
+                not isinstance(version, str)
+                or not version.isascii()
+                or not version.isdecimal()
+            ):
+                raise ValueError(
+                    "ASC returned a nonnumeric build version; refusing to reset the build number"
+                )
             highest = max(highest, int(version))
         next_url = page.get("links", {}).get("next")
         if not next_url:
             return highest
         if not isinstance(next_url, str) or not next_url.startswith(BASE + "/"):
             raise ValueError("Unexpected ASC pagination URL")
-        path, params = next_url[len(BASE):], None
+        path, params = next_url[len(BASE) :], None
 
 
 def build_beta_detail(build_id: str) -> dict:
@@ -476,7 +493,9 @@ def main() -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("status", help="List recent builds")
-    sub.add_parser("preflight", help="Validate signing credentials locally without API requests")
+    sub.add_parser(
+        "preflight", help="Validate signing credentials locally without API requests"
+    )
     sub.add_parser("next-build-number", help="Print the next build number (latest+1)")
 
     p_wait = sub.add_parser("wait", help="Poll until build is processed")

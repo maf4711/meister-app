@@ -10,7 +10,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@unittest.skipUnless(sys.platform == "darwin" and shutil.which("swiftc"), "macOS Swift compiler required")
+@unittest.skipUnless(
+    sys.platform == "darwin" and shutil.which("swiftc"), "macOS Swift compiler required"
+)
 class WebhookHelpersTests(unittest.TestCase):
     def test_validation_and_redirect_rejection(self):
         with tempfile.TemporaryDirectory() as directory:

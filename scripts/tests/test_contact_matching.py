@@ -25,8 +25,19 @@ SOURCES = [
 def compile_checks(directory):
     binary = Path(directory) / "contact-checks"
     result = subprocess.run(
-        ["swiftc", "-swift-version", "5", "-O", "-parse-as-library", *map(str, SOURCES), "-o", str(binary)],
-        capture_output=True, text=True, timeout=120,
+        [
+            "swiftc",
+            "-swift-version",
+            "5",
+            "-O",
+            "-parse-as-library",
+            *map(str, SOURCES),
+            "-o",
+            str(binary),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     if result.returncode:
         raise AssertionError(result.stdout + result.stderr)
@@ -39,7 +50,9 @@ class ContactMatchingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run(
                 [str(compile_checks(directory))],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("Contact matching checks passed", result.stdout)
@@ -48,17 +61,25 @@ class ContactMatchingTests(unittest.TestCase):
 if __name__ == "__main__":
     if sys.argv[1:] == ["--benchmark"]:
         source_hashes = {
-            str(source.relative_to(ROOT)): hashlib.sha256(source.read_bytes()).hexdigest()
+            str(source.relative_to(ROOT)): hashlib.sha256(
+                source.read_bytes()
+            ).hexdigest()
             for source in SOURCES
         }
         with tempfile.TemporaryDirectory() as directory:
-            subprocess.run([str(compile_checks(directory)), "--benchmark"], check=True, timeout=240)
+            subprocess.run(
+                [str(compile_checks(directory)), "--benchmark"], check=True, timeout=240
+            )
         final_hashes = {
-            str(source.relative_to(ROOT)): hashlib.sha256(source.read_bytes()).hexdigest()
+            str(source.relative_to(ROOT)): hashlib.sha256(
+                source.read_bytes()
+            ).hexdigest()
             for source in SOURCES
         }
         if source_hashes != final_hashes:
-            raise RuntimeError("Sources changed during benchmarking; rerun against a stable snapshot")
+            raise RuntimeError(
+                "Sources changed during benchmarking; rerun against a stable snapshot"
+            )
         print(json.dumps({"source_sha256": source_hashes}, sort_keys=True))
     else:
         unittest.main()

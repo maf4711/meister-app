@@ -1,4 +1,5 @@
 """Exercise native helper contracts without starting the app or modifying macOS."""
+
 from pathlib import Path
 import subprocess
 import sys
@@ -14,7 +15,7 @@ class NativeHelpersTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
             main = path / "main.swift"
-            main.write_text(r'''
+            main.write_text(r"""
 import Foundation
 let large = CommandRunner.run("/bin/sh", ["-c", "yes abcdefghijklmnop | head -n 20000"], timeout: 5)
 precondition(large.succeeded && large.output.count > 200_000)
@@ -33,9 +34,22 @@ precondition(DiagnosticReport(value: [String]()).isComplete)
 precondition(!DiagnosticReport<[String]>(value: nil).isComplete)
 precondition(CommandRunner.Result(status: 1, output: "Permission denied").issue(source: "fixture") == issue)
 precondition(CommandRunner.Result(status: 0, output: "").issue(source: "fixture") == nil)
-''')
+""")
             binary = path / "checks"
-            subprocess.run(["swiftc", str(ROOT / "MeisterMacOS/Diagnostics/DiagnosticReport.swift"),
-                            str(ROOT / "MeisterMacOS/Commands/CommandRunner.swift"), str(main),
-                            "-o", str(binary)], check=True, capture_output=True, text=True, timeout=90)
-            subprocess.run([str(binary)], check=True, capture_output=True, text=True, timeout=15)
+            subprocess.run(
+                [
+                    "swiftc",
+                    str(ROOT / "MeisterMacOS/Diagnostics/DiagnosticReport.swift"),
+                    str(ROOT / "MeisterMacOS/Commands/CommandRunner.swift"),
+                    str(main),
+                    "-o",
+                    str(binary),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+            subprocess.run(
+                [str(binary)], check=True, capture_output=True, text=True, timeout=15
+            )
