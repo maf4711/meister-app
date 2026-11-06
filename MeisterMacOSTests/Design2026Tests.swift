@@ -75,6 +75,16 @@ final class BashModuleDestinationTests: XCTestCase {
         XCTAssertFalse(purge.destructive, "default `meister purge` only previews; --do is opt-in, not the module default")
     }
 
+    func test_purgeApplyRequiresExplicitRunAndConfirmation() {
+        guard let apply = BashModule.all.first(where: { $0.id == "purge-do" }) else {
+            return XCTFail("BashModule.all is missing the \"purge-do\" entry for `meister purge --do`")
+        }
+        XCTAssertEqual(apply.group, .storage)
+        XCTAssertEqual(apply.command, ["purge", "--do"])
+        XCTAssertTrue(apply.runsLive)
+        XCTAssertTrue(apply.destructive)
+    }
+
     func test_purgeIsFindableByGermanPurgeableKeyword() {
         XCTAssertEqual(BashModule.search("löschbar").first?.id, "purge")
     }
