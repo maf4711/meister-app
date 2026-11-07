@@ -62,6 +62,32 @@ final class BashModuleDestinationTests: XCTestCase {
         // If we reached here, every id had a matching case (or hit default, which is intended for bash modules).
         XCTAssertTrue(true, "All BashModule destinations constructed successfully")
     }
+
+    // `meister purge` (lib/commands/purge.sh) reclaims Finder's "purgeable" space —
+    // thins local Time Machine snapshots and evicts stale local iCloud copies.
+    // Default (no flags) is a read-only preview, so the module is non-destructive.
+    func test_purgeModuleIsRegisteredAsNonDestructivePreview() {
+        guard let purge = BashModule.all.first(where: { $0.id == "purge" }) else {
+            return XCTFail("BashModule.all is missing the \"purge\" entry for `meister purge`")
+        }
+        XCTAssertEqual(purge.group, .storage)
+        XCTAssertEqual(purge.command, ["purge"])
+        XCTAssertFalse(purge.destructive, "default `meister purge` only previews; --do is opt-in, not the module default")
+    }
+
+    func test_purgeApplyRequiresExplicitRunAndConfirmation() {
+        guard let apply = BashModule.all.first(where: { $0.id == "purge-do" }) else {
+            return XCTFail("BashModule.all is missing the \"purge-do\" entry for `meister purge --do`")
+        }
+        XCTAssertEqual(apply.group, .storage)
+        XCTAssertEqual(apply.command, ["purge", "--do"])
+        XCTAssertTrue(apply.runsLive)
+        XCTAssertTrue(apply.destructive)
+    }
+
+    func test_purgeIsFindableByGermanPurgeableKeyword() {
+        XCTAssertEqual(BashModule.search("löschbar").first?.id, "purge")
+    }
 }
 
 final class SmartDiagnosisTests: XCTestCase {

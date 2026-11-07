@@ -67,6 +67,8 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "duplicates",      title: "Duplicate Finder",    symbol: "doc.on.doc",                group: .storage,      command: []), // native Swift
         .init(id: "undo-cleanup",    title: "Undo Last Cleanup",   symbol: "arrow.uturn.backward.circle", group: .storage,    command: []), // native Swift
         .init(id: "disk",            title: "Disk Analyzer",       symbol: "externaldrive",             group: .storage,      command: ["disk"]),
+        .init(id: "purge",           title: "Purgeable Space",     symbol: "externaldrive.badge.minus", group: .storage,      command: ["purge"]),
+        .init(id: "purge-do",        title: "Free Purgeable Space", symbol: "externaldrive.fill.badge.minus", group: .storage, command: ["purge", "--do"], runsLive: true, destructive: true),
         .init(id: "large-files",     title: "Large Files",         symbol: "doc.badge.gearshape",       group: .storage,      command: ["-L", "-n"]),
         .init(id: "caches",          title: "Clean Caches",        symbol: "archivebox",                group: .storage,      command: ["-C", "-n"]),
         .init(id: "trash",           title: "Empty Trash",         symbol: "trash",                     group: .storage,      command: ["-T", "-n"]),
@@ -289,6 +291,7 @@ extension BashModule {
         "login-items": "autostart startobjekte dienste",
         "addressbook": "kontakte adressbuch icloud",
         "storage-forecast": "speicher prognose festplatte voll",
+        "purge": "löschbar purgeable snapshots icloud speicher freigeben",
         "battery": "akku batterie ladezustand",
         "system-updates": "aktualisieren updates macos",
         "browser-privacy": "browser datenschutz verlauf cookies",
