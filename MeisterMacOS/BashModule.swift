@@ -62,6 +62,7 @@ struct BashModule: Identifiable, Hashable {
         .init(id: "symlink-inspector", title: "Symlink Inspector", symbol: "link", group: .storage,     command: []), // native Swift
         .init(id: "system-cleanup",  title: "System Cleanup",      symbol: "sparkles",                  group: .storage,      command: []), // native Swift
         .init(id: "uninstaller",     title: "Uninstaller",         symbol: "trash.square",              group: .storage,      command: []), // native Swift
+        .init(id: "bloatware",       title: "Bloatware Remover",   symbol: "exclamationmark.shield.fill", group: .storage,   command: []), // native Swift
         .init(id: "large-old-files", title: "Large & Old Files",   symbol: "doc.zipper",                group: .storage,      command: []), // native Swift
         .init(id: "duplicates",      title: "Duplicate Finder",    symbol: "doc.on.doc",                group: .storage,      command: []), // native Swift
         .init(id: "undo-cleanup",    title: "Undo Last Cleanup",   symbol: "arrow.uturn.backward.circle", group: .storage,    command: []), // native Swift
@@ -167,6 +168,8 @@ extension BashModule {
             SystemCleanupView()
         case "uninstaller":
             UninstallerView()
+        case "bloatware":
+            BloatwareView()
         case "large-old-files":
             LargeFilesView()
         case "duplicates":

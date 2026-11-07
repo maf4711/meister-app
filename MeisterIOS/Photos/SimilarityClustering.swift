@@ -26,6 +26,15 @@ protocol DuplicateCandidate {
 
 extension PhotoItem: DuplicateCandidate {}
 
+/// Capture time for the copy-window split. Pure so TestFlight false-dupes
+/// (same couple, different days) can be unit-tested without PHAsset.
+protocol CaptureTimed {
+    var id: String { get }
+    var creationDate: Date? { get }
+}
+
+extension PhotoItem: CaptureTimed {}
+
 actor SimilarityClustering {
     struct Cluster: Identifiable {
         let id = UUID()
@@ -63,14 +72,18 @@ actor SimilarityClustering {
         let failedIDs: [String]
     }
 
-    /// Vision distance threshold — lower = stricter. 0.5 is a sane default for near-duplicates.
+    /// Vision distance threshold — lower = stricter. 0.35 is copies/bursts;
+    /// 0.5 was grouping lookalike portraits from different days (TF Apr 21).
     let distanceThreshold: Float
+
+    /// Two frames are copies only if captured within this window.
+    static let captureWindow: TimeInterval = 60
 
     /// Pin the feature-print algorithm revision so results are stable across OS
     /// updates (a new default revision would silently shift distances/threshold).
     static let featurePrintRevision = VNGenerateImageFeaturePrintRequest.currentRevision
 
-    init(distanceThreshold: Float = 0.5) { self.distanceThreshold = distanceThreshold }
+    init(distanceThreshold: Float = 0.35) { self.distanceThreshold = distanceThreshold }
 
     func cluster(
         _ items: [PhotoItem],
@@ -84,18 +97,30 @@ actor SimilarityClustering {
 
         var fingerprints: [String: VNFeaturePrintObservation] = [:]
         let total = photos.count
-        for (index, item) in photos.enumerated() {
-            // Aspect-preserving thumbnail — a forced 299×299 square distorts the
-            // image before fingerprinting, hurting Vision's crop/rotation matching.
-            let size = Self.fittedSize(
-                pixelWidth: item.pixelWidth, pixelHeight: item.pixelHeight, maxDimension: 299
-            )
-            if let thumb = await PhotoThumbnailLoader.thumbnail(
-                for: item.asset, size: size, contentMode: .aspectFit
-            ), let observation = await featurePrint(for: thumb) {
-                fingerprints[item.id] = observation
+        var processed = 0
+        let chunkSize = 6
+        let chunks = stride(from: 0, to: photos.count, by: chunkSize).map {
+            Array(photos[$0..<min($0 + chunkSize, photos.count)])
+        }
+        for chunk in chunks {
+            await withTaskGroup(of: (String, VNFeaturePrintObservation?).self) { group in
+                for item in chunk {
+                    group.addTask {
+                        let size = Self.fittedSize(
+                            pixelWidth: item.pixelWidth, pixelHeight: item.pixelHeight, maxDimension: 299
+                        )
+                        guard let thumb = await PhotoThumbnailLoader.thumbnail(
+                            for: item.asset, size: size, contentMode: .aspectFit
+                        ) else { return (item.id, nil) }
+                        return (item.id, await Self.featurePrint(for: thumb))
+                    }
+                }
+                for await (id, observation) in group {
+                    if let observation { fingerprints[id] = observation }
+                    processed += 1
+                    progress(Double(processed) / Double(total))
+                }
             }
-            progress(Double(index + 1) / Double(total))
         }
 
         let failed = Self.failedIDs(allIDs: photos.map(\.id), fingerprintedIDs: Set(fingerprints.keys))
@@ -117,9 +142,11 @@ actor SimilarityClustering {
         var result: [Cluster] = []
         for idxs in indexClusters {
             let clusterItems = idxs.map { fpPhotos[$0] }
-            // Keep the best shot (sharpness + face quality), not the largest file.
-            let keeper = await BestShotSelector.pickBest(in: clusterItems)?.id
-            result.append(Cluster(items: clusterItems, keeperID: keeper))
+            // Vision groups lookalikes; only same-moment frames are copies.
+            for timed in Self.splitByCaptureWindow(clusterItems, window: Self.captureWindow) {
+                let keeper = await BestShotSelector.pickBest(in: timed)?.id
+                result.append(Cluster(items: timed, keeperID: keeper))
+            }
         }
         return ClusterResult(
             clusters: result.sorted { $0.reclaimableBytes > $1.reclaimableBytes },
@@ -206,6 +233,32 @@ actor SimilarityClustering {
         allIDs.filter { !fingerprintedIDs.contains($0) }
     }
 
+    /// Split a Vision cluster into groups whose capture times all lie within
+    /// `window`. Drops singletons. TF: couple photos from Mar 20 / Apr 2 / Apr 19
+    /// must not be one "9 copies" list.
+    static func splitByCaptureWindow<T: CaptureTimed>(
+        _ items: [T],
+        window: TimeInterval = captureWindow
+    ) -> [[T]] {
+        let dated = items.filter { $0.creationDate != nil }
+            .sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
+        guard dated.count > 1 else { return [] }
+        var groups: [[T]] = []
+        var current: [T] = [dated[0]]
+        for item in dated.dropFirst() {
+            let prev = current.last!.creationDate!
+            let next = item.creationDate!
+            if next.timeIntervalSince(prev) <= window {
+                current.append(item)
+            } else {
+                if current.count > 1 { groups.append(current) }
+                current = [item]
+            }
+        }
+        if current.count > 1 { groups.append(current) }
+        return groups
+    }
+
     /// Whether a photo may take part in duplicate detection. Videos aren't photos;
     /// bursts are intentional multi-frame captures, not accidental duplicates, so
     /// they're excluded to keep `cluster()` from ever offering a burst frame for
@@ -244,7 +297,7 @@ actor SimilarityClustering {
         return CGSize(width: (w * scale).rounded(), height: (h * scale).rounded())
     }
 
-    private func featurePrint(for image: UIImage) async -> VNFeaturePrintObservation? {
+    private static func featurePrint(for image: UIImage) async -> VNFeaturePrintObservation? {
         guard let cgImage = image.cgImage else { return nil }
         // `cgImage` drops UIImage.imageOrientation, so a portrait shot taken in
         // landscape orientation would fingerprint rotated. Pass the orientation

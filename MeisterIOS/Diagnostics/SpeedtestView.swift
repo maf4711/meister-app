@@ -35,15 +35,17 @@ struct SpeedtestProView: View {
                 if history.isEmpty {
                     Text("No tests yet.").foregroundStyle(.secondary)
                 } else {
-                    Chart(history) { result in
-                        LineMark(
-                            x: .value("When", result.timestamp),
-                            y: .value("Mbps", result.downloadMbps)
-                        )
-                        .foregroundStyle(Color.orange)
+                    if history.count >= 2 {
+                        Chart(history) { result in
+                            LineMark(
+                                x: .value("When", result.timestamp),
+                                y: .value("Mbps", result.downloadMbps)
+                            )
+                            .foregroundStyle(Color.orange)
+                        }
+                        .frame(height: 160)
+                        .chartYAxisLabel("Download Mbps")
                     }
-                    .frame(height: 160)
-                    .chartYAxisLabel("Download Mbps")
                     ForEach(history.reversed()) { result in
                         HStack {
                             Text(result.timestamp.formatted(date: .abbreviated, time: .shortened))
@@ -140,11 +142,11 @@ struct DNSBenchmarkView: View {
     }
 
     private func run() {
-        Task {
+        Task { @MainActor in
             isRunning = true
+            defer { isRunning = false }
             let engine = DNSBenchmark()
             results = await engine.run()
-            isRunning = false
         }
     }
 }
