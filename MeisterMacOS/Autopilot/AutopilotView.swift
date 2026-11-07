@@ -6,6 +6,7 @@ struct AutopilotState: Equatable {
     let isInstalled: Bool
     let plistPath: String
     let lastRun: Date?
+    var isLoaded: Bool = false
 }
 
 actor AutopilotReader {
@@ -29,7 +30,8 @@ actor AutopilotReader {
         }()
         return AutopilotState(isInstalled: installed,
                               plistPath: Self.plistURL.path,
-                              lastRun: last)
+                              lastRun: last,
+                              isLoaded: CommandRunner.run("/bin/launchctl", ["print", "gui/\(getuid())/\(Self.label)"]).succeeded)
     }
 
     /// Generate the plist that runs `/usr/bin/open meister://run/quick-clean` daily at 03:30.
@@ -63,26 +65,25 @@ actor AutopilotReader {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                                 withIntermediateDirectories: true)
         try plistContents().write(to: url, atomically: true, encoding: .utf8)
-        // Bootstrap into launchd; ignore errors if already loaded.
-        _ = run("/bin/launchctl", ["bootstrap", "gui/\(getuid())", url.path])
+        let loaded = CommandRunner.run("/bin/launchctl", ["print", "gui/\(getuid())/\(Self.label)"])
+        if !loaded.succeeded {
+            let result = CommandRunner.run("/bin/launchctl", ["bootstrap", "gui/\(getuid())", url.path])
+            guard result.succeeded else { throw NSError(domain: "Meister.Autopilot", code: Int(result.status),
+                userInfo: [NSLocalizedDescriptionKey: "Erinnerung konnte nicht aktiviert werden: \(result.output)"]) }
+        }
     }
 
-    func uninstall() async {
+    func uninstall() async throws {
         let url = Self.plistURL
-        _ = run("/bin/launchctl", ["bootout", "gui/\(getuid())/\(Self.label)"])
-        try? FileManager.default.removeItem(at: url)
+        let loaded = CommandRunner.run("/bin/launchctl", ["print", "gui/\(getuid())/\(Self.label)"])
+        if loaded.succeeded {
+            let result = CommandRunner.run("/bin/launchctl", ["bootout", "gui/\(getuid())/\(Self.label)"])
+            guard result.succeeded else { throw NSError(domain: "Meister.Autopilot", code: Int(result.status),
+                userInfo: [NSLocalizedDescriptionKey: "Erinnerung konnte nicht deaktiviert werden: \(result.output)"]) }
+        }
+        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
@@ -110,7 +111,8 @@ final class AutopilotModel: ObservableObject {
     func uninstall() async {
         isWorking = true
         defer { isWorking = false }
-        await reader.uninstall()
+        do { try await reader.uninstall() }
+        catch { self.error = error.localizedDescription }
         await reload()
     }
 }
@@ -138,7 +140,7 @@ struct AutopilotView: View {
             Text("Autopilot")
                 .font(MD4.Typo.title2)
                 .foregroundStyle(MD4.SemColor.textPrimary)
-            Text("Tägliche Quick-Clean um 03:30 via LaunchAgent. Apple-Shortcuts-kompatibel.")
+            Text("Tägliche Erinnerung um 03:30: öffnet Quick Clean. Die Bereinigung startest du selbst.")
                 .font(MD4.Typo.small)
                 .foregroundStyle(MD4.SemColor.textSecondary)
         }
@@ -166,7 +168,7 @@ struct AutopilotView: View {
                 .foregroundStyle(s.isInstalled ? MD4.SemColor.success : MD4.SemColor.textSecondary)
                 .font(.title)
             VStack(alignment: .leading, spacing: 2) {
-                Text(s.isInstalled ? "Autopilot installiert" : "Autopilot nicht aktiv")
+                Text(s.isLoaded ? "Erinnerung aktiv" : s.isInstalled ? "Erinnerung installiert, aber nicht geladen" : "Erinnerung nicht aktiv")
                     .font(MD4.Typo.title3)
                     .foregroundStyle(MD4.SemColor.textPrimary)
                 if let last = s.lastRun {
@@ -174,7 +176,7 @@ struct AutopilotView: View {
                         .font(MD4.Typo.caption)
                         .foregroundStyle(MD4.SemColor.textSecondary)
                 } else {
-                    Text("Noch kein Lauf protokolliert")
+                    Text("Keine automatische Bereinigung")
                         .font(MD4.Typo.caption)
                         .foregroundStyle(MD4.SemColor.textSecondary)
                 }
@@ -204,19 +206,19 @@ struct AutopilotView: View {
                     Button(role: .destructive) {
                         Task { await model.uninstall() }
                     } label: {
-                        Label("Autopilot deaktivieren", systemImage: "trash")
+                        Label("Erinnerung deaktivieren", systemImage: "trash")
                     }
                 } else {
                     Button {
                         Task { await model.install() }
                     } label: {
-                        Label("Autopilot aktivieren", systemImage: "play.circle.fill")
+                        Label("Erinnerung aktivieren", systemImage: "play.circle.fill")
                     }
                     .keyboardShortcut(.defaultAction)
                 }
                 Spacer()
-                if let url = URL(string: "file://\(s.plistPath)"),
-                   FileManager.default.fileExists(atPath: s.plistPath) {
+                if FileManager.default.fileExists(atPath: s.plistPath) {
+                    let url = URL(fileURLWithPath: s.plistPath)
                     Button("Plist im Finder zeigen") {
                         NSWorkspace.shared.activateFileViewerSelecting([url])
                     }

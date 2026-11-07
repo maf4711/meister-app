@@ -267,3 +267,57 @@ extension BashModule {
         }
     }
 }
+
+// Shared search index: every module remains discoverable by title, ID, group and CLI command.
+extension BashModule {
+    private static let searchAliases: [String: String] = [
+        "dashboard": "übersicht zustand start",
+        "health-score": "gesundheit bewertung diagnose",
+        "system-cleanup": "aufräumen bereinigen speicher cache",
+        "quick-clean": "schnell aufräumen bereinigen",
+        "auto-clean-all": "alles aufräumen bereinigen",
+        "duplicates": "duplikate doppelte dateien",
+        "large-old-files": "große alte dateien speicher voll",
+        "uninstaller": "apps programme deinstallieren entfernen",
+        "security-status": "sicherheit schutz firewall filevault gatekeeper sip",
+        "time-machine": "backup sicherung snapshots",
+        "undo-cleanup": "wiederherstellen rückgängig papierkorb",
+        "wifi": "wlan internet verbindung diagnose",
+        "network-connections": "netzwerk verbindungen internet",
+        "memory-pressure": "arbeitsspeicher ram langsam",
+        "process-manager": "prozesse cpu langsam beenden",
+        "login-items": "autostart startobjekte dienste",
+        "addressbook": "kontakte adressbuch icloud",
+        "storage-forecast": "speicher prognose festplatte voll",
+        "battery": "akku batterie ladezustand",
+        "system-updates": "aktualisieren updates macos",
+        "browser-privacy": "browser datenschutz verlauf cookies",
+        "maintain-dry": "wartung vorschau",
+        "heal-dry": "reparatur selbstheilung vorschau"
+    ]
+
+    static func search(_ query: String) -> [BashModule] {
+        func normalize(_ value: String) -> String {
+            value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "de_DE"))
+        }
+        let query = normalize(query).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return Array(all.prefix(8)) }
+        let tokens = query.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        return all.compactMap { module -> (BashModule, Int)? in
+            let title = normalize(module.title)
+            let index = normalize([module.title, module.id, module.group.rawValue,
+                                   module.command.joined(separator: " "), searchAliases[module.id] ?? ""].joined(separator: " "))
+            if tokens.allSatisfy({ index.contains($0) }) {
+                return (module, title == query ? 1000 : title.hasPrefix(query) ? 800 : title.contains(query) ? 600 : 400)
+            }
+            guard tokens.count == 1 else { return nil }
+            var cursor = title.startIndex
+            for character in query {
+                guard let found = title[cursor...].firstIndex(of: character) else { return nil }
+                cursor = title.index(after: found)
+            }
+            return (module, 50)
+        }.sorted { $0.1 == $1.1 ? $0.0.id < $1.0.id : $0.1 > $1.1 }
+            .prefix(20).map(\.0)
+    }
+}

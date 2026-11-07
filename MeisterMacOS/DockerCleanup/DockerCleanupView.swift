@@ -28,12 +28,15 @@ struct DockerUsage: Equatable {
 }
 
 actor DockerCleanupReader {
-    func read() async -> DockerUsage? {
-        let raw = run("/usr/local/bin/docker", ["system", "df", "--format", "json"])
-            .nonEmpty
-            ?? run("/opt/homebrew/bin/docker", ["system", "df", "--format", "json"])
-            .nonEmpty
-        guard let raw = raw else { return nil }
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<DockerUsage> {
+        let result = command(pickDocker(), ["system", "df", "--format", "json"])
+        if let issue = result.issue(source: "Docker") { return .init(value: nil, issues: [issue]) }
+        let raw = result.output
 
         // `docker system df --format json` returns one JSON line per type.
         var images = DockerUsage.Stat(total: 0, active: 0, sizeBytes: 0, reclaimableBytes: 0)
@@ -41,12 +44,18 @@ actor DockerCleanupReader {
         var volumes = images
         var cache = images
 
+        var parsedTypes = Set<String>()
+        var malformed = false
         for line in raw.split(separator: "\n") {
             guard let data = String(line).data(using: .utf8),
                   let any = try? JSONSerialization.jsonObject(with: data),
-                  let dict = any as? [String: Any] else { continue }
+                  let dict = any as? [String: Any] else { malformed = true; continue }
             let type = (dict["Type"] as? String) ?? ""
-            let stat = parseStat(dict)
+            guard ["Images", "Containers", "Local Volumes", "Build Cache"].contains(type),
+                  dict["TotalCount"] != nil, dict["Active"] != nil,
+                  dict["Size"] is String, dict["Reclaimable"] is String,
+                  !parsedTypes.contains(type), let stat = parseStat(dict) else { malformed = true; continue }
+            parsedTypes.insert(type)
             switch type {
             case "Images":     images = stat
             case "Containers": containers = stat
@@ -55,14 +64,14 @@ actor DockerCleanupReader {
             default: break
             }
         }
-        return DockerUsage(images: images, containers: containers, volumes: volumes, buildCache: cache)
+        let issues: [DiagnosticIssue] = malformed || parsedTypes.count != 4
+            ? [.init(kind: .invalidOutput, source: "Docker-Speicherbelegung")] : []
+        guard !parsedTypes.isEmpty else { return .init(value: nil, issues: issues) }
+        return .init(value: DockerUsage(images: images, containers: containers, volumes: volumes, buildCache: cache), issues: issues)
     }
 
     func prune() async -> Bool {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: pickDocker())
-        p.arguments = ["system", "prune", "-af", "--volumes"]
-        do { try p.run(); p.waitUntilExit(); return p.terminationStatus == 0 } catch { return false }
+        CommandRunner.run(pickDocker(), ["system", "prune", "-af", "--volumes"], timeout: 300).succeeded
     }
 
     private nonisolated func pickDocker() -> String {
@@ -71,16 +80,23 @@ actor DockerCleanupReader {
         return "/usr/local/bin/docker"
     }
 
-    private nonisolated func parseStat(_ dict: [String: Any]) -> DockerUsage.Stat {
-        let total = Int(dict["TotalCount"] as? Int ?? Int((dict["TotalCount"] as? String) ?? "0") ?? 0)
-        let active = Int(dict["Active"] as? Int ?? Int((dict["Active"] as? String) ?? "0") ?? 0)
-        let size = parseSize(dict["Size"] as? String ?? "0B")
-        let reclaim = parseReclaimable(dict["Reclaimable"] as? String ?? "0B")
+    private nonisolated func parseStat(_ dict: [String: Any]) -> DockerUsage.Stat? {
+        func count(_ key: String) -> Int? {
+            let value = dict[key] as? Int ?? (dict[key] as? String).flatMap(Int.init)
+            guard let value, value >= 0 else { return nil }
+            return value
+        }
+        guard let total = count("TotalCount"), let active = count("Active"), active <= total,
+              let sizeText = dict["Size"] as? String, let size = parsedSize(sizeText),
+              let reclaimText = dict["Reclaimable"] as? String,
+              let reclaim = parsedSize(reclaimText.split(separator: " ").first.map(String.init) ?? "") else { return nil }
         return .init(total: total, active: active, sizeBytes: size, reclaimableBytes: reclaim)
     }
 
     /// Parse strings like "1.23GB", "5MB", "150kB"
-    nonisolated func parseSize(_ s: String) -> Int64 {
+    nonisolated func parseSize(_ s: String) -> Int64 { parsedSize(s) ?? 0 }
+
+    private nonisolated func parsedSize(_ s: String) -> Int64? {
         let cleaned = s.trimmingCharacters(in: .whitespaces)
         let suffixes: [(String, Double)] = [
             ("TB", 1_099_511_627_776), ("GB", 1_073_741_824),
@@ -89,10 +105,10 @@ actor DockerCleanupReader {
         for (suffix, mul) in suffixes {
             if cleaned.hasSuffix(suffix) {
                 let numPart = String(cleaned.dropLast(suffix.count))
-                if let n = Double(numPart) { return Int64(n * mul) }
+                if let n = Double(numPart), n.isFinite, n >= 0, n * mul < Double(Int64.max) { return Int64(n * mul) }
             }
         }
-        return 0
+        return nil
     }
 
     /// Reclaimable strings look like "850MB (78%)" — strip the % part.
@@ -101,47 +117,35 @@ actor DockerCleanupReader {
         return parseSize(head)
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let fm = FileManager.default
-        guard fm.isExecutableFile(atPath: tool) else { return "" }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
-}
-
-private extension String {
-    var nonEmpty: String? { self.isEmpty ? nil : self }
 }
 
 @MainActor
 final class DockerCleanupModel: ObservableObject {
     @Published var usage: DockerUsage? = nil
-    @Published var dockerInstalled = true
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
+    @Published var isPruning = false
+    @Published var actionMessage: String?
     @Published var isLoading = false
-    @Published var lastReclaimed: Int64?
-    private let reader = DockerCleanupReader()
+    private let reader: DockerCleanupReader
+    init(reader: DockerCleanupReader = DockerCleanupReader()) { self.reader = reader }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        if let u = await reader.read() {
-            self.usage = u
-            self.dockerInstalled = true
-        } else {
-            self.dockerInstalled = false
-        }
+        let report = await reader.read()
+        usage = report.value
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 
     func prune() async {
-        guard let before = usage?.totalReclaimable else { return }
+        guard usage != nil, issues.isEmpty, !isPruning, !isLoading else { return }
+        isPruning = true
+        defer { isPruning = false }
         let ok = await reader.prune()
-        if ok { lastReclaimed = before }
+        actionMessage = ok ? "Bereinigung abgeschlossen. Speicherbelegung wird neu ermittelt." : "Bereinigung fehlgeschlagen. Docker-Dienst und Berechtigungen prüfen."
         await reload()
     }
 }
@@ -154,6 +158,8 @@ struct DockerCleanupView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
+            if let message = model.actionMessage { Text(message).font(.caption).padding() }
             content
         }
         .background(MD4.SemColor.background)
@@ -164,7 +170,7 @@ struct DockerCleanupView: View {
                 Task { await model.prune() }
             }
         } message: {
-            Text("`docker system prune -af --volumes` — entfernt alle ungenutzten Images, gestoppte Container, dangling volumes und den Build-Cache. \(model.usage?.totalReclaimable.humanBytes ?? "?") werden frei.")
+            Text("`docker system prune -af --volumes` — entfernt alle ungenutzten Images, gestoppte Container, dangling volumes und den Build-Cache. \(model.usage?.totalReclaimable.humanBytes ?? "?") sind laut letzter Messung potenziell bereinigbar.")
         }
     }
 
@@ -179,11 +185,11 @@ struct DockerCleanupView: View {
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
             Spacer()
-            if model.dockerInstalled {
+            Group {
                 Button { Task { await model.reload() } } label: {
                     Label("Reload", systemImage: "arrow.clockwise")
                 }
-                .disabled(model.isLoading)
+                .disabled(model.isLoading || model.isPruning)
             }
         }
         .padding(20)
@@ -191,10 +197,9 @@ struct DockerCleanupView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !model.dockerInstalled {
-            ContentUnavailableView("Docker nicht gefunden",
-                                   systemImage: "shippingbox",
-                                   description: Text("`docker` ist weder unter /usr/local/bin/ noch /opt/homebrew/bin/ installiert. Erst Docker Desktop installieren."))
+        if model.usage == nil && !model.issues.isEmpty {
+            ContentUnavailableView("Docker-Diagnose nicht verfügbar", systemImage: "shippingbox",
+                                   description: Text("Installation, laufenden Docker-Dienst und Zugriffsrechte prüfen. Anschließend erneut aktualisieren."))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let u = model.usage {
             VStack(spacing: 16) {
@@ -205,11 +210,7 @@ struct DockerCleanupView: View {
                     statTile("Build Cache", u.buildCache, icon: "hammer")
                 }
                 pruneButton(reclaimable: u.totalReclaimable)
-                if let last = model.lastReclaimed {
-                    Text("Letzter Lauf: \(last.humanBytes) reclaimed")
-                        .font(MD4.Typo.caption)
-                        .foregroundStyle(MD4.SemColor.success)
-                }
+
                 Spacer()
             }
             .padding(20)
@@ -254,7 +255,7 @@ struct DockerCleanupView: View {
         } label: {
             HStack {
                 Image(systemName: "trash")
-                Text("System Prune — \(reclaimable.humanBytes) frei")
+                Text("System Prune — bis zu \(reclaimable.humanBytes)")
                     .font(MD4.Typo.headline)
             }
             .padding(.horizontal, 24).padding(.vertical, 12)
@@ -263,6 +264,6 @@ struct DockerCleanupView: View {
                         in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(reclaimable == 0)
+        .disabled(reclaimable == 0 || !model.issues.isEmpty || model.isPruning || model.isLoading)
     }
 }

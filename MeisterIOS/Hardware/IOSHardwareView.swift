@@ -6,6 +6,7 @@ import MeradOSDesign4
 /// expose; no system_profiler equivalent on iOS.
 struct IOSHardwareView: View {
     @StateObject private var model = IOSDashboardModel()
+    @State private var screenMetrics: HardwareScreenMetrics?
 
     var body: some View {
         ScrollView {
@@ -56,6 +57,11 @@ struct IOSHardwareView: View {
             .padding(20)
         }
         .background(MD4.SemColor.background)
+        .background {
+            HardwareScreenReader { screenMetrics = $0 }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
         .task { if model.snapshot == nil { await model.reload() } }
         .refreshable { await model.reload() }
     }
@@ -117,9 +123,11 @@ struct IOSHardwareView: View {
     }
 
     private func screenRows() -> [(String, String)] {
-        let screen = UIScreen.main
-        let pts = screen.bounds.size
-        let scale = screen.scale
+        guard let screenMetrics else {
+            return [("Auflösung", "—"), ("Punkte", "—"), ("Scale", "—")]
+        }
+        let pts = screenMetrics.points
+        let scale = screenMetrics.scale
         let pixelW = Int(pts.width * scale)
         let pixelH = Int(pts.height * scale)
         return [
@@ -139,6 +147,69 @@ struct IOSHardwareView: View {
         case 25..<50: return "battery.50"
         case 10..<25: return "battery.25"
         default:      return "battery.0"
+        }
+    }
+}
+
+private struct HardwareScreenMetrics: Equatable {
+    let points: CGSize
+    let scale: CGFloat
+}
+
+private struct HardwareScreenReader: UIViewRepresentable {
+    let onChange: (HardwareScreenMetrics?) -> Void
+
+    func makeUIView(context: Context) -> HardwareScreenProbe {
+        let view = HardwareScreenProbe()
+        view.onChange = onChange
+        return view
+    }
+
+    func updateUIView(_ view: HardwareScreenProbe, context: Context) {
+        view.onChange = onChange
+        view.scheduleUpdate()
+    }
+}
+
+private final class HardwareScreenProbe: UIView {
+    var onChange: ((HardwareScreenMetrics?) -> Void)?
+    private var lastMetrics: HardwareScreenMetrics?
+    private var updateScheduled = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        registerForTraitChanges([UITraitDisplayScale.self]) { (view: HardwareScreenProbe, _) in
+            view.scheduleUpdate()
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        scheduleUpdate()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        scheduleUpdate()
+    }
+
+    func scheduleUpdate() {
+        guard !updateScheduled else { return }
+        updateScheduled = true
+        // Publish after SwiftUI's update, reading the screen again at delivery.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.updateScheduled = false
+            let metrics = self.window?.windowScene.map {
+                HardwareScreenMetrics(points: $0.screen.bounds.size, scale: self.traitCollection.displayScale)
+            }
+            guard metrics != self.lastMetrics else { return }
+            self.lastMetrics = metrics
+            self.onChange?(metrics)
         }
     }
 }

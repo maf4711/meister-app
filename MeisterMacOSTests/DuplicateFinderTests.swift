@@ -47,3 +47,19 @@ final class DuplicateFinderTests: XCTestCase {
         XCTAssertEqual(hash, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
     }
 }
+
+final class DuplicateSafetyTests: XCTestCase {
+    func test_missingFileDoesNotHashAsEmptyFile() {
+        XCTAssertNil(DuplicateFinder.sha256(of: URL(fileURLWithPath: "/nonexistent/meister-fixture")))
+    }
+
+    func test_overlappingRootsDoNotCreateFalseDuplicates() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("one.bin")
+        try Data(repeating: 1, count: 8192).write(to: file)
+        let result = await DuplicateFinder().find(in: [root, root, file], minSize: 1)
+        XCTAssertTrue(result.isEmpty)
+    }
+}

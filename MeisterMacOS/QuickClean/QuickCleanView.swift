@@ -93,7 +93,7 @@ struct QuickCleanView: View {
                         .font(MD4.Typo.body)
                         .foregroundStyle(MD4.SemColor.error)
                 } else {
-                    Text("Reclaimed \(model.bytesReclaimed.humanBytes)")
+                    Text("\(model.bytesReclaimed.humanBytes) in den Papierkorb verschoben")
                         .font(MD4.Typo.title3)
                         .foregroundStyle(MD4.SemColor.success)
                     Text("Items liegen im ~/.Trash. Mit Undo Last Cleanup zurückholbar.")

@@ -58,6 +58,7 @@ struct MacRootView: View {
     private var detail: some View {
         if let module = BashModule.all.first(where: { $0.id == nav.selection }) {
             module.destination
+                .id(module.id)
         } else {
             ContentUnavailableView(
                 "Select a module",

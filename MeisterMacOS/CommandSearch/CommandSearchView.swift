@@ -10,18 +10,7 @@ struct CommandSearchView: View {
     @FocusState private var focused: Bool
 
     private var results: [BashModule] {
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else {
-            return Array(BashModule.all.prefix(8))
-        }
-        return BashModule.all
-            .compactMap { module -> (BashModule, Int)? in
-                let s = score(query: q, module: module)
-                return s > 0 ? (module, s) : nil
-            }
-            .sorted { $0.1 > $1.1 }
-            .prefix(20)
-            .map(\.0)
+        BashModule.search(query)
     }
 
     var body: some View {
@@ -55,6 +44,11 @@ struct CommandSearchView: View {
                         .id(idx)
                     }
                 }
+                .overlay {
+                    if results.isEmpty {
+                        ContentUnavailableView.search(text: query)
+                    }
+                }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .frame(height: 360)
@@ -71,7 +65,7 @@ struct CommandSearchView: View {
                 .stroke(MD4.SemColor.divider, lineWidth: 0.5)
         )
         .onKeyPress(.upArrow) { highlight = max(0, highlight - 1); return .handled }
-        .onKeyPress(.downArrow) { highlight = min(results.count - 1, highlight + 1); return .handled }
+        .onKeyPress(.downArrow) { highlight = max(0, min(results.count - 1, highlight + 1)); return .handled }
         .onKeyPress(.escape) { isPresented = false; return .handled }
         .onAppear { focused = true; highlight = 0 }
         .onChange(of: query) { _, _ in highlight = 0 }
@@ -103,25 +97,9 @@ struct CommandSearchView: View {
 
     private func commit() {
         guard !results.isEmpty else { return }
-        let target = results[min(highlight, results.count - 1)]
+        let target = results[max(0, min(highlight, results.count - 1))]
         selection = target.id
         isPresented = false
     }
 
-    /// Simple subsequence-aware fuzzy score: title prefix match > title contains > group contains.
-    private func score(query: String, module: BashModule) -> Int {
-        let title = module.title.lowercased()
-        let group = module.group.rawValue.lowercased()
-        if title == query { return 1000 }
-        if title.hasPrefix(query) { return 500 + (100 - min(99, title.count - query.count)) }
-        if title.contains(query) { return 200 }
-        if group.contains(query) { return 100 }
-        // Subsequence: every char in query appears in title in order
-        var ti = title.startIndex
-        for q in query {
-            guard let found = title[ti...].firstIndex(of: q) else { return 0 }
-            ti = title.index(after: found)
-        }
-        return 50
-    }
 }

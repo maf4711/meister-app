@@ -1,4 +1,5 @@
 import Foundation
+import IOKit.ps
 
 struct TimeMachineStatus: Equatable {
     let isRunning: Bool
@@ -32,7 +33,7 @@ actor TimeMachineReader {
 
         return TimeMachineStatus(
             isRunning: running,
-            isOnAC: ProcessInfo.processInfo.thermalState != .critical,
+            isOnAC: Self.isOnACPower(),
             lastBackupDate: lastBackup,
             destination: dest,
             raw: raw
@@ -62,18 +63,17 @@ actor TimeMachineReader {
         return out.lowercased().contains("deleted")
     }
 
+    private nonisolated static func isOnACPower() -> Bool {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let source = IOPSGetProvidingPowerSourceType(info)?.takeUnretainedValue() else { return false }
+        return (source as String) == kIOPSACPowerValue
+    }
+
     // MARK: - helpers
 
     private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8) ?? ""
+        let result = CommandRunner.run(tool, args)
+        return result.output
     }
 
     /// `tmutil status` outputs a non-strict plist. Crude key=value extractor good enough for booleans.

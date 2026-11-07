@@ -11,6 +11,7 @@ final class TimeMachineModel: ObservableObject {
     private let reader = TimeMachineReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         async let s = reader.status()
@@ -28,6 +29,7 @@ final class TimeMachineModel: ObservableObject {
 
 struct TimeMachineView: View {
     @StateObject private var model = TimeMachineModel()
+    @State private var pendingDeletion: LocalSnapshot?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,6 +38,16 @@ struct TimeMachineView: View {
             statusCard
             Divider().background(MD4.SemColor.divider)
             snapshotList
+                .confirmationDialog("Snapshot endgültig löschen?", isPresented: Binding(
+                    get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }
+                ), titleVisibility: .visible) {
+                    if let snapshot = pendingDeletion {
+                        Button("Endgültig löschen", role: .destructive) {
+                            pendingDeletion = nil
+                            Task { await model.deleteSnapshot(snapshot) }
+                        }
+                    }
+                } message: { Text("Dieser Wiederherstellungspunkt kann danach nicht zurückgeholt werden.") }
         }
         .background(MD4.SemColor.background)
         .task { if model.status == nil { await model.reload() } }
@@ -124,7 +136,7 @@ struct TimeMachineView: View {
                         }
                         Spacer()
                         Button(role: .destructive) {
-                            Task { await model.deleteSnapshot(snap) }
+                            pendingDeletion = snap
                         } label: {
                             Image(systemName: "trash")
                         }

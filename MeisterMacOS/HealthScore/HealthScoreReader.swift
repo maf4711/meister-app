@@ -3,144 +3,105 @@ import Foundation
 struct HealthSignal: Identifiable, Hashable {
     let id: String
     let title: String
-    let weight: Int            // contribution to score, 0-30
-    let earned: Int            // points earned, 0...weight
+    let weight: Int
+    let earned: Int
     let detail: String
     var lostPoints: Int { weight - earned }
 }
 
 struct HealthSnapshot {
-    let score: Int             // 0-100
+    let score: Int
     let signals: [HealthSignal]
+    let timestamp: Date
+    var hasMeasurements: Bool { signals.contains { $0.weight > 0 } }
+    var hasUnknowns: Bool { signals.contains { $0.weight == 0 } }
+}
+
+struct DiskCapacity {
+    let total: Int64
+    let available: Int64
+    var availableFraction: Double { Double(available) / Double(max(1, total)) }
+
+    static func read() -> DiskCapacity? {
+        let path = FileManager.default.fileExists(atPath: "/System/Volumes/Data")
+            ? "/System/Volumes/Data" : "/"
+        guard let values = try? URL(fileURLWithPath: path).resourceValues(forKeys: [
+            .volumeTotalCapacityKey, .volumeAvailableCapacityForImportantUsageKey
+        ]), let total = values.volumeTotalCapacity, total > 0,
+              let available = values.volumeAvailableCapacityForImportantUsage else { return nil }
+        return DiskCapacity(total: Int64(total), available: max(0, available))
+    }
+}
+
+/// A single observation is shared by the score and dashboard recommendations.
+struct HealthObservation {
+    let security: [SecurityCheck]
+    let scans: [CategoryScan]
+    let backup: TimeMachineStatus
+    let snapshots: [LocalSnapshot]
+    let disk: DiskCapacity?
     let timestamp: Date
 }
 
 actor HealthScoreReader {
-
     private let security = SecurityStatusReader()
     private let cleanup = SystemCleanupScanner()
     private let tm = TimeMachineReader()
 
-    /// Aggregate signals into a 0-100 score.
-    /// Weights chosen so that a fully-protected, recently-backed-up,
-    /// uncluttered Mac is 100. Each missing thing eats points.
+    func observe(includeDetails: Bool = true) async -> HealthObservation {
+        async let checks = security.readCore()
+        async let scans: [CategoryScan] = includeDetails ? cleanup.scanAll() : []
+        async let backup = tm.status()
+        async let snapshots: [LocalSnapshot] = includeDetails ? tm.snapshots() : []
+        return await HealthObservation(security: checks, scans: scans, backup: backup,
+                                       snapshots: snapshots, disk: DiskCapacity.read(), timestamp: Date())
+    }
+
     func snapshot() async -> HealthSnapshot {
-        async let secChecks = security.readAll()
-        async let cleanupScans = cleanup.scanAll()
-        async let tmStatus = tm.status()
-        async let snaps = tm.snapshots()
-        let sec = await secChecks
-        let scans = await cleanupScans
-        let backup = await tmStatus
-        let snapList = await snaps
+        Self.evaluate(await observe(includeDetails: false))
+    }
 
+    /// Unknown observations are excluded, never silently classified as failures.
+    static func evaluate(_ observation: HealthObservation) -> HealthSnapshot {
         var signals: [HealthSignal] = []
-
-        // FileVault — 20 pts
-        let fv = sec.first { $0.id == "filevault" }
-        signals.append(.init(
-            id: "filevault", title: "FileVault Disk-Encryption", weight: 20,
-            earned: stateOK(fv?.state) ? 20 : 0,
-            detail: stateLabel(fv?.state)
-        ))
-
-        // Firewall — 10 pts
-        let fw = sec.first { $0.id == "firewall" }
-        signals.append(.init(
-            id: "firewall", title: "Firewall", weight: 10,
-            earned: stateOK(fw?.state) ? 10 : 0,
-            detail: stateLabel(fw?.state)
-        ))
-
-        // Gatekeeper — 10 pts
-        let gk = sec.first { $0.id == "gatekeeper" }
-        signals.append(.init(
-            id: "gatekeeper", title: "Gatekeeper", weight: 10,
-            earned: stateOK(gk?.state) ? 10 : 0,
-            detail: stateLabel(gk?.state)
-        ))
-
-        // SIP — 10 pts
-        let sip = sec.first { $0.id == "sip" }
-        signals.append(.init(
-            id: "sip", title: "System Integrity Protection", weight: 10,
-            earned: stateOK(sip?.state) ? 10 : 0,
-            detail: stateLabel(sip?.state)
-        ))
-
-        // Backup recency — 20 pts
-        let bytesPerDay: Int = {
-            if let last = backup.lastBackupDate {
-                return Int(Date().timeIntervalSince(last) / 86_400)
+        for (id, title, weight) in [("filevault", "FileVault", 20), ("firewall", "Firewall", 10),
+                                     ("gatekeeper", "Gatekeeper", 10), ("sip", "System Integrity Protection", 10)] {
+            let state = observation.security.first { $0.id == id }?.state
+            let earned: Int
+            let measuredWeight: Int
+            let detail: String
+            switch state {
+            case .ok(let label): earned = weight; measuredWeight = weight; detail = label
+            case .warn(let label), .bad(let label): earned = 0; measuredWeight = weight; detail = label
+            case .unknown(let label): earned = 0; measuredWeight = 0; detail = label
+            case nil: earned = 0; measuredWeight = 0; detail = "Nicht ermittelt"
             }
-            return 999
-        }()
-        let backupEarned: Int
-        let backupDetail: String
-        switch bytesPerDay {
-        case 0...2:    backupEarned = 20; backupDetail = "Backup ≤2 Tage alt"
-        case 3...7:    backupEarned = 14; backupDetail = "Backup ≤1 Woche alt"
-        case 8...30:   backupEarned = 8;  backupDetail = "Backup ≤1 Monat alt"
-        case 31...90:  backupEarned = 3;  backupDetail = "Backup älter als 1 Monat"
-        default:       backupEarned = 0;  backupDetail = "Kein/sehr altes Backup gefunden"
+            signals.append(.init(id: id, title: title, weight: measuredWeight, earned: earned, detail: detail))
         }
-        signals.append(.init(
-            id: "backup", title: "Time-Machine-Backup", weight: 20,
-            earned: backupEarned, detail: backupDetail
-        ))
-
-        // Cleanup-Druck — 15 pts (umgekehrt: viel reclaimable = wenig Punkte)
-        let totalCleanable = scans.reduce(Int64(0)) { $0 + $1.bytes }
-        let gb = Double(totalCleanable) / 1_073_741_824
-        let cleanEarned: Int
-        let cleanDetail: String
-        switch gb {
-        case ..<1:    cleanEarned = 15; cleanDetail = "<1 GB recyclebar"
-        case 1..<5:   cleanEarned = 12; cleanDetail = "\(String(format: "%.1f", gb)) GB recyclebar"
-        case 5..<20:  cleanEarned = 7;  cleanDetail = "\(String(format: "%.1f", gb)) GB Cleanup-Druck"
-        case 20..<50: cleanEarned = 3;  cleanDetail = "\(String(format: "%.1f", gb)) GB — System-Cleanup ist überfällig"
-        default:      cleanEarned = 0;  cleanDetail = "\(String(format: "%.1f", gb)) GB — kritischer Cleanup-Stau"
+        // No destination means no backup reminders or score penalty (user preference).
+        if observation.backup.destination != nil {
+            if let last = observation.backup.lastBackupDate {
+                let days = max(0, Int(observation.timestamp.timeIntervalSince(last) / 86_400))
+                let earned = days <= 2 ? 20 : days <= 7 ? 14 : days <= 30 ? 8 : 0
+                signals.append(.init(id: "backup", title: "Time-Machine-Backup", weight: 20,
+                                     earned: earned, detail: "Letztes Backup vor \(days) Tagen"))
+            } else {
+                signals.append(.init(id: "backup", title: "Time-Machine-Backup", weight: 0,
+                                     earned: 0, detail: "Backup-Alter nicht ermittelbar"))
+            }
         }
-        signals.append(.init(
-            id: "cleanup", title: "System-Cleanup-Druck", weight: 15,
-            earned: cleanEarned, detail: cleanDetail
-        ))
-
-        // Lokale Snapshots — 10 pts (zu viele = SSD-Last)
-        let snapEarned: Int
-        let snapDetail: String
-        switch snapList.count {
-        case 0...8:   snapEarned = 10; snapDetail = "\(snapList.count) lokale Snapshots — gesund"
-        case 9...20:  snapEarned = 6;  snapDetail = "\(snapList.count) Snapshots — ok"
-        case 21...50: snapEarned = 2;  snapDetail = "\(snapList.count) Snapshots — purgen"
-        default:      snapEarned = 0;  snapDetail = "\(snapList.count) Snapshots — fressen Disk-Space"
+        if let disk = observation.disk {
+            let earned = disk.availableFraction >= 0.15 ? 30 : disk.availableFraction >= 0.05 ? 15 : 0
+            signals.append(.init(id: "disk", title: "Verfügbarer Speicher", weight: 30, earned: earned,
+                                 detail: "\(disk.available.humanBytes) verfügbar auf dem Datenvolume"))
+        } else {
+            signals.append(.init(id: "disk", title: "Verfügbarer Speicher", weight: 0, earned: 0,
+                                 detail: "Speicherplatz nicht ermittelbar"))
         }
-        signals.append(.init(
-            id: "snapshots", title: "Lokale APFS-Snapshots", weight: 10,
-            earned: snapEarned, detail: snapDetail
-        ))
-
-        // Quarantine-Flags — 5 pts
-        let qa = sec.first { $0.id == "quarantine" }
-        signals.append(.init(
-            id: "quarantine", title: "Downloads ohne Gatekeeper-Check", weight: 5,
-            earned: stateOK(qa?.state) ? 5 : 2,
-            detail: stateLabel(qa?.state)
-        ))
-
-        let total = signals.reduce(0) { $0 + $1.earned }
-        return HealthSnapshot(score: total, signals: signals, timestamp: Date())
-    }
-
-    private nonisolated func stateOK(_ s: SecurityState?) -> Bool {
-        if case .ok = s { return true }
-        return false
-    }
-
-    private nonisolated func stateLabel(_ s: SecurityState?) -> String {
-        switch s {
-        case .ok(let l), .warn(let l), .bad(let l), .unknown(let l): return l
-        case .none: return "—"
-        }
+        // Cache size, quarantine flags and snapshot count alone are not health failures.
+        let weight = signals.reduce(0) { $0 + $1.weight }
+        let earned = signals.reduce(0) { $0 + $1.earned }
+        let score = weight > 0 ? Int((Double(earned) / Double(weight) * 100).rounded()) : 0
+        return HealthSnapshot(score: score, signals: signals, timestamp: observation.timestamp)
     }
 }

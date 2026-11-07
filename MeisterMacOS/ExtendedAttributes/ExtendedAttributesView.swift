@@ -155,12 +155,25 @@ final class ExtendedAttributesModel: ObservableObject {
 
 struct ExtendedAttributesView: View {
     @StateObject private var model = ExtendedAttributesModel()
+    @State private var pendingCleanup: XAttrCategory?
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
             content
+        }
+        .confirmationDialog("Metadaten verändern?", isPresented: Binding(
+            get: { pendingCleanup != nil }, set: { if !$0 { pendingCleanup = nil } }
+        ), titleVisibility: .visible) {
+            if let category = pendingCleanup {
+                Button("Änderung durchführen", role: .destructive) {
+                    pendingCleanup = nil
+                    Task { await model.clean(category) }
+                }
+            }
+        } message: {
+            Text("AppleDouble-Dateien können Ressourcen und Dateimetadaten enthalten. Quarantäne-Markierungen gehören zum macOS-Schutz; ihr Entfernen lässt sich hier nicht rückgängig machen.")
         }
         .background(MD4.SemColor.background)
         .task { if model.categories.isEmpty { await model.scan() } }
@@ -172,7 +185,7 @@ struct ExtendedAttributesView: View {
                 Text("Extended Attributes")
                     .font(MD4.Typo.title2)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text(".DS_Store + ._* Files in den Trash, Quarantine-xattr stripped — keine Datei wird gelöscht außer Apple-Müll-Files.")
+                Text("Finder-Metadaten, AppleDouble-Ressourcen und Herkunftsmarkierungen prüfen. Änderungen benötigen Bestätigung.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -219,7 +232,7 @@ struct ExtendedAttributesView: View {
             }
             Spacer()
             Button(actionLabel(c)) {
-                Task { await model.clean(c) }
+                pendingCleanup = c
             }
             .disabled(c.urls.isEmpty)
         }

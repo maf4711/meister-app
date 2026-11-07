@@ -23,7 +23,7 @@ final class DNSFlushModel: ObservableObject {
         // Two commands required since macOS 10.10:
         // 1. dscacheutil -flushcache   (User-level resolver cache)
         // 2. killall -HUP mDNSResponder (mDNS service cache)
-        // Both require no special privileges on modern macOS.
+        // Signalling the system-owned responder can require administrator privileges.
         let cache = run("/usr/bin/dscacheutil", ["-flushcache"])
         let mdns  = run("/usr/bin/killall",     ["-HUP", "mDNSResponder"])
         let ok = (cache.status == 0) && (mdns.status == 0)
@@ -32,15 +32,8 @@ final class DNSFlushModel: ObservableObject {
     }
 
     private nonisolated static func run(_ tool: String, _ args: [String]) -> (status: Int32, output: String) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return (-1, error.localizedDescription) }
-        let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return (p.terminationStatus, out)
+        let result = CommandRunner.run(tool, args)
+        return (result.status, result.output)
     }
 }
 

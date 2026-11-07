@@ -53,7 +53,7 @@ final class UndoCleanupTests: XCTestCase {
             "timestamp": "2026-05-07T15:00:00+02:00",
             "totalReclaimedBytes": 1234,
             "entries": [
-                ["category": "userCaches", "path": "/foo.cache", "bytes": 1000, "recycled": true],
+                ["category": "userCaches", "path": "/foo.cache", "bytes": 1000, "recycled": true, "trashPath": fakeHome.appendingPathComponent(".Trash/foo 2.cache").path],
                 ["category": "trash",      "path": "/bar.txt",   "bytes": 234,  "recycled": false],
             ],
         ]
@@ -65,6 +65,7 @@ final class UndoCleanupTests: XCTestCase {
         // Only `recycled: true` entries are restorable.
         XCTAssertEqual(entries.count, 1)
         XCTAssertEqual(entries.first?.category, "userCaches")
+        XCTAssertEqual(entries.first?.trashURL.lastPathComponent, "foo 2.cache")
     }
 }
 

@@ -13,10 +13,25 @@ struct NetConnection: Identifiable, Hashable {
 }
 
 actor NetworkConnectionsReader {
-    /// `lsof -i -nP -F p,c,L,n,t` produces structured field-prefixed output.
-    func read() async -> [NetConnection] {
-        let raw = run("/usr/sbin/lsof", ["-i", "-nP", "-F", "pcLnTt"])
-        return parse(raw)
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<[NetConnection]> {
+        let result = command("/usr/sbin/lsof", ["-i", "-nP", "-F", "pcLfPnTt"])
+        // lsof returns 1 without diagnostics when the selection has no matches.
+        if result.status == 1 && result.failureKind == nil && result.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .init(value: [])
+        }
+        let entries = parse(result.output)
+        if let issue = result.issue(source: "Netzwerkverbindungen") {
+            return .init(value: entries.isEmpty ? nil : entries, issues: [issue])
+        }
+        if entries.isEmpty && !result.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Netzwerkverbindungen")])
+        }
+        return .init(value: entries)
     }
 
     /// lsof -F output format: each line starts with a field-letter:
@@ -27,34 +42,36 @@ actor NetworkConnectionsReader {
         var command: String = ""
         var user: String = ""
 
+        var descriptor = ""
+        var proto = "?"
+        var address: String?
+        var state = "—"
+        func flush() {
+            guard let address, pid != nil else { return }
+            let parsed = parseAddress(address)
+            out.append(NetConnection(id: "\(pid ?? 0):\(descriptor):\(out.count)", processName: command,
+                pid: pid, user: user, proto: proto == "?" ? parsed.proto : proto,
+                localAddress: parsed.local, remoteAddress: parsed.remote,
+                state: state == "—" ? parsed.state : state))
+        }
         for line in raw.split(separator: "\n", omittingEmptySubsequences: true) {
-            let s = String(line)
-            guard let firstChar = s.first else { continue }
-            let value = String(s.dropFirst())
-            switch firstChar {
+            guard let field = line.first else { continue }
+            let value = String(line.dropFirst())
+            switch field {
             case "p":
-                pid = Int(value)
-            case "c":
-                command = value
-            case "L":
-                user = value
-            case "n":
-                // Network address pair like "*:9000" or "127.0.0.1:443->192.168.1.5:62320"
-                let (proto, local, remote, state) = parseAddress(value)
-                out.append(NetConnection(
-                    id: "\(pid ?? 0):\(local):\(remote ?? "")",
-                    processName: command,
-                    pid: pid,
-                    user: user,
-                    proto: proto,
-                    localAddress: local,
-                    remoteAddress: remote,
-                    state: state
-                ))
-            default:
-                break
+                flush(); address = nil; descriptor = ""; proto = "?"; state = "—"
+                pid = Int(value); command = ""; user = ""
+            case "f":
+                flush(); address = nil; proto = "?"; state = "—"; descriptor = value
+            case "c": command = value
+            case "L": user = value
+            case "P": proto = value
+            case "n": address = value
+            case "T": if value.hasPrefix("ST=") { state = String(value.dropFirst(3)) }
+            default: break
             }
         }
+        flush()
         return out.sorted {
             // Established connections first, then sort by process
             if ($0.state == "ESTABLISHED") != ($1.state == "ESTABLISHED") {
@@ -77,7 +94,7 @@ actor NetworkConnectionsReader {
 
         // Strip "(STATE)" if present
         var state = "—"
-        if let r = rest.range(of: " ("), let close = rest.range(of: ")") {
+        if let r = rest.range(of: " ("), let close = rest.range(of: ")"), r.upperBound <= close.lowerBound {
             state = String(rest[r.upperBound..<close.lowerBound])
             rest = String(rest[..<r.lowerBound])
         }
@@ -91,16 +108,6 @@ actor NetworkConnectionsReader {
         return (proto, rest, nil, state)
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
@@ -109,6 +116,9 @@ final class NetworkConnectionsModel: ObservableObject {
     @Published var query: String = ""
     @Published var showOnlyEstablished = false
     @Published var isLoading = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
+    @Published var hasLoaded = false
     private let reader = NetworkConnectionsReader()
 
     var filtered: [NetConnection] {
@@ -128,9 +138,14 @@ final class NetworkConnectionsModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.connections = await reader.read()
+        let report = await reader.read()
+        connections = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
+        hasLoaded = true
     }
 }
 
@@ -141,9 +156,18 @@ struct NetworkConnectionsView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             controls
             Divider().background(MD4.SemColor.divider)
-            list
+            if model.isLoading && !model.hasLoaded {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if model.connections.isEmpty && !model.issues.isEmpty {
+                ContentUnavailableView("Keine verlässlichen Messwerte", systemImage: "network")
+            } else if model.filtered.isEmpty && model.hasLoaded {
+                ContentUnavailableView(model.connections.isEmpty ? "Keine Verbindungen gefunden" : "Keine passenden Verbindungen", systemImage: "network")
+            } else {
+                list
+            }
         }
         .background(MD4.SemColor.background)
         .task { if model.connections.isEmpty { await model.reload() } }

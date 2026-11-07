@@ -1,15 +1,36 @@
-# Fabrik Welle-1 hygiene skeleton (zero-cost template wave)
 name: ci
 on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  smoke:
+  release-guards:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Presence smoke
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5, Node 24
+        with:
+          persist-credentials: false
+      - name: Release authorization regression tests (isolated fixtures)
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+      - name: Shell syntax
         run: |
-          test -f README.md -o -f README -o -f readme.md
-          echo "hygiene smoke ok"
+          for script in scripts/auto-ship.sh scripts/notify-tom.sh scripts/install-auto-ship.sh; do
+            bash -n "$script"
+          done
+  meisterkit:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5, Node 24
+        with:
+          persist-credentials: false
+      - name: Native package tests (no simulator or signing)
+        run: swift test --package-path Packages/MeisterKit
+      - name: Release guard tests on macOS
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+      - name: Type-check iOS matching and photo helpers (no simulator launch)
+        run: bash scripts/check-ios-helpers.sh

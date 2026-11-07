@@ -81,17 +81,8 @@ actor CodeSignatureReader {
     }
 
     private nonisolated func run(_ tool: String, _ args: [String]) -> (output: String, terminationStatus: Int32) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let outPipe = Pipe()
-        let errPipe = Pipe()
-        p.standardOutput = outPipe
-        p.standardError = errPipe
-        do { try p.run(); p.waitUntilExit() } catch { return ("", -1) }
-        let out = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return (out + err, p.terminationStatus)
+        let result = CommandRunner.run(tool, args)
+        return (result.output, result.status)
     }
 }
 
@@ -134,6 +125,7 @@ final class CodeSignatureModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.apps = await reader.read()

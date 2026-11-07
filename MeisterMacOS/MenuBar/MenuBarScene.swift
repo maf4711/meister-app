@@ -31,7 +31,7 @@ struct MenuBarSceneView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Meister")
                         .font(.headline)
-                    Text(model.snapshot.map { _ in scoreVerdict(model.snapshot?.score ?? 0) } ?? "Berechne…")
+                    Text(model.snapshot.map { $0.hasUnknowns ? "Teilbewertung — Messwerte fehlen" : scoreVerdict($0.score) } ?? "Berechne…")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

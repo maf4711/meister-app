@@ -44,12 +44,15 @@ final class SystemCleanupModel: ObservableObject {
     }
 
     func clean() async {
-        guard !selected.isEmpty else { return }
+        guard !selected.isEmpty, !isCleaning else { return }
+        errorMessage = nil
         isCleaning = true
         defer { isCleaning = false }
         do {
             let manifest = try await cleaner.clean(selected)
             self.lastManifest = manifest
+            let failed = manifest.entries.filter { $0.error != nil }.count
+            if failed > 0 { errorMessage = "\(failed) Einträge konnten nicht bereinigt werden." }
             // Refresh scan to reflect new sizes.
             await scan()
         } catch {

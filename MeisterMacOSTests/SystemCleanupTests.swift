@@ -79,3 +79,18 @@ final class HumanBytesTests: XCTestCase {
         XCTAssertFalse(Int64(2048).humanBytes.isEmpty)
     }
 }
+
+final class CleanupOverlapTests: XCTestCase {
+    func test_userCacheDoesNotDoubleCountNamedCategories() async throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let cache = home.appendingPathComponent("Library/Caches/Homebrew")
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try Data(repeating: 1, count: 8192).write(to: cache.appendingPathComponent("fixture.bin"))
+        let reader = SystemCleanupScanner(home: home)
+        let generic = await reader.scan(.userCaches)
+        let brew = await reader.scan(.homebrewCache)
+        XCTAssertEqual(generic.itemCount, 0)
+        XCTAssertEqual(brew.itemCount, 1)
+    }
+}

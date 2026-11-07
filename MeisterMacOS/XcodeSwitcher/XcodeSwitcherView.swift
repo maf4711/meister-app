@@ -45,18 +45,12 @@ actor XcodeSwitcherReader {
     /// Activates the given Xcode. xcode-select -s requires sudo, so we prepare
     /// the command and ask the user to run it in Terminal.
     nonisolated func activateCommand(for install: XcodeInstall) -> String {
-        "sudo xcode-select -s \(install.path.path.replacingOccurrences(of: " ", with: "\\ "))/Contents/Developer"
+        "sudo xcode-select -s \(CommandRunner.shellQuote(install.path.appendingPathComponent("Contents/Developer").path))"
     }
 
     private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let result = CommandRunner.run(tool, args)
+        return result.output
     }
 }
 
@@ -68,6 +62,7 @@ final class XcodeSwitcherModel: ObservableObject {
     private let reader = XcodeSwitcherReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         let (i, a) = await reader.read()

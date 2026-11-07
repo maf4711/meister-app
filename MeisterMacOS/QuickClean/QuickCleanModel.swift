@@ -26,6 +26,7 @@ final class QuickCleanModel: ObservableObject {
 
     /// Scan + clean safe-default categories in one go.
     func run() async {
+        guard !isRunning else { return }
         phase = .scanning
         bytesReclaimed = 0
         lastError = nil
@@ -44,6 +45,8 @@ final class QuickCleanModel: ObservableObject {
         do {
             let manifest = try await cleaner.clean(Set(safeWithBytes.map(\.category)))
             bytesReclaimed = manifest.totalReclaimedBytes
+            let failures = manifest.entries.filter { $0.error != nil }
+            if !failures.isEmpty { lastError = "\(failures.count) Einträge konnten nicht bereinigt werden." }
         } catch {
             lastError = error.localizedDescription
         }

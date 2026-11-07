@@ -39,9 +39,10 @@ final class AutoCleanAllModel: ObservableObject {
     /// Phases (each independent, errors don't block the next):
     /// 1. System Cleanup (safe-default categories only — never Xcode Archives, never Mail Downloads)
     /// 2. Browser Privacy: Caches across all browsers (NOT history/cookies — opt-in only)
-    /// 3. Extended Attributes: .DS_Store + ._* under user dirs
-    /// 4. Empty user ~/.Trash
+    /// 3. Extended Attributes: .DS_Store under user dirs
+    /// Recycled files remain in Trash for recovery.
     func run() async {
+        guard !isRunning else { return }
         phaseLog.removeAll()
         bytesReclaimed = 0
         lastError = nil
@@ -52,6 +53,10 @@ final class AutoCleanAllModel: ObservableObject {
             let safe = Set(scans.filter { $0.category.safeDefault && $0.bytes > 0 }.map(\.category))
             guard !safe.isEmpty else { return 0 }
             let manifest = try await cleaner.clean(safe)
+            if manifest.entries.contains(where: { $0.error != nil }) {
+                throw NSError(domain: "Meister.Cleanup", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "System-Cleanup nur teilweise abgeschlossen. Protokoll prüfen."])
+            }
             return manifest.totalReclaimedBytes
         }
 
@@ -63,20 +68,15 @@ final class AutoCleanAllModel: ObservableObject {
             return await browserPrivacy.recycle(cachesOnly)
         }
 
-        // 3. Extended attributes — .DS_Store + ._* (skip quarantine: needs explicit user consent)
-        await runPhase(label: "Junk-Files (.DS_Store, ._*)", icon: "doc.badge.gearshape") { [self] in
+        // 3. Extended attributes — .DS_Store (skip quarantine: needs explicit user consent)
+        await runPhase(label: "Finder-Metadaten (.DS_Store)", icon: "doc.badge.gearshape") { [self] in
             let cats = await xattrScanner.scan()
-            let cleanable = cats.filter { $0.kind == .dsStore || $0.kind == .appleDouble }
+            let cleanable = cats.filter { $0.kind == .dsStore }
             var total: Int64 = 0
             for cat in cleanable {
                 total += await xattrScanner.clean(cat)
             }
             return total
-        }
-
-        // 4. Empty Trash
-        await runPhase(label: "Papierkorb leeren", icon: "trash") { [self] in
-            await emptyTrash()
         }
 
         phase = .done
@@ -94,44 +94,7 @@ final class AutoCleanAllModel: ObservableObject {
         }
     }
 
-    private func emptyTrash() async -> Int64 {
-        let trash = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")
-        let fm = FileManager.default
-        guard let items = try? fm.contentsOfDirectory(at: trash,
-                                                       includingPropertiesForKeys: [.fileAllocatedSizeKey],
-                                                       options: [.skipsHiddenFiles]) else { return 0 }
-        var total: Int64 = 0
-        for item in items {
-            let bytes = (try? sizeOf(item)) ?? 0
-            do {
-                try fm.removeItem(at: item)
-                total += bytes
-            } catch {
-                // Skip — locked / SIP-protected items just stay.
-            }
-        }
-        return total
-    }
 
-    private func sizeOf(_ url: URL) throws -> Int64 {
-        let fm = FileManager.default
-        var isDir: ObjCBool = false
-        guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { return 0 }
-        if !isDir.boolValue {
-            let attrs = try fm.attributesOfItem(atPath: url.path)
-            return Int64((attrs[.size] as? NSNumber)?.int64Value ?? 0)
-        }
-        var total: Int64 = 0
-        if let it = fm.enumerator(at: url,
-                                   includingPropertiesForKeys: [.fileAllocatedSizeKey],
-                                   options: [.skipsHiddenFiles]) {
-            for case let f as URL in it {
-                let s = (try? f.resourceValues(forKeys: [.fileAllocatedSizeKey]).fileAllocatedSize) ?? 0
-                total += Int64(s)
-            }
-        }
-        return total
-    }
 }
 
 struct AutoCleanAllView: View {
@@ -157,7 +120,7 @@ struct AutoCleanAllView: View {
                 Task { await model.run() }
             }
         } message: {
-            Text("Räumt System Cleanup safe-defaults + Browser-Caches + .DS_Store/._*-Junk + leert den Papierkorb. Items aus System-Cleanup landen erst im Trash und werden dann mit-geleert. History/Cookies/Bookmarks bleiben unangetastet.")
+            Text("Bereinigt ausgewählte System- und Browser-Caches sowie Finder-Metadaten (.DS_Store). Recycelte Dateien bleiben zur Wiederherstellung im Papierkorb. Der Papierkorb wird nicht automatisch geleert.")
         }
     }
 
@@ -167,7 +130,7 @@ struct AutoCleanAllView: View {
                 Text("Auto-Clean Alles")
                     .font(MD4.Typo.title2)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("Ein Klick → System-Cleanup + Browser-Caches + Junk-Files + Papierkorb. Erledigt.")
+                Text("System-Cleanup, Browser-Caches und Metadaten. Der Papierkorb bleibt erhalten.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -181,6 +144,9 @@ struct AutoCleanAllView: View {
         VStack(spacing: 24) {
             heroButton
             phaseList
+            if let error = model.lastError {
+                Text(error).foregroundStyle(MD4.SemColor.error).font(MD4.Typo.small)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -262,10 +228,10 @@ struct AutoCleanAllView: View {
 
     private var summary: some View {
         VStack(spacing: 4) {
-            Text("Fertig — \(model.bytesReclaimed.humanBytes) reclaimed")
+            Text(model.lastError == nil ? "Fertig — \(model.bytesReclaimed.humanBytes) bearbeitet" : "Mit Fehlern abgeschlossen")
                 .font(MD4.Typo.title3)
                 .foregroundStyle(MD4.SemColor.success)
-            Text("Mit Undo Last Cleanup zurückholbar (außer Trash-Inhalt).")
+            Text("System-Cleanup über Undo rückgängig machen; weitere Dateien über den Papierkorb.")
                 .font(MD4.Typo.caption)
                 .foregroundStyle(MD4.SemColor.textSecondary)
         }
@@ -282,9 +248,9 @@ struct AutoCleanAllView: View {
 
     private var buttonSubtitle: String {
         switch model.phase {
-        case .idle: return "System + Browser + Junk + Trash, alles in einem Lauf"
+        case .idle: return "System + Browser + Metadaten, Papierkorb bleibt erhalten"
         case .running(let label): return label
-        case .done: return "\(model.bytesReclaimed.humanBytes) reclaimed"
+        case .done: return "\(model.bytesReclaimed.humanBytes) bearbeitet"
         }
     }
 }

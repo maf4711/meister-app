@@ -11,25 +11,41 @@ struct BrewIssue: Identifiable, Hashable {
 }
 
 actor BrewDoctorReader {
-    private static let candidates = [
-        "/opt/homebrew/bin/brew",
-        "/usr/local/bin/brew",
-    ]
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    private let locate: @Sendable () -> String?
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) },
+         locate: @escaping @Sendable () -> String? = {
+             ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first { FileManager.default.isExecutableFile(atPath: $0) }
+         }) {
+        self.command = command
+        self.locate = locate
+    }
+    func brewPath() -> String? { locate() }
 
-    func brewPath() -> String? {
-        Self.candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+    func runDoctor() async -> DiagnosticReport<[BrewIssue]> {
+        guard let brew = brewPath() else { return .init(value: nil, issues: [.init(kind: .missingTool, source: "Homebrew")]) }
+        let result = command(brew, ["doctor"])
+        let findings = parseDoctor(result.output)
+        if let issue = result.issue(source: "Brew Doctor") {
+            // Doctor uses exit 1 for ordinary findings, not just execution errors.
+            if result.status == 1 && result.failureKind == nil && issue.kind == .executionFailed && !findings.isEmpty {
+                return .init(value: findings)
+            }
+            return .init(value: findings.isEmpty ? nil : findings, issues: [issue])
+        }
+        guard !findings.isEmpty || result.output.contains("Your system is ready to brew") else {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Brew Doctor")])
+        }
+        return .init(value: findings)
     }
 
-    func runDoctor() async -> [BrewIssue] {
-        guard let brew = brewPath() else { return [] }
-        let raw = run(brew, ["doctor"])
-        return parseDoctor(raw)
-    }
-
-    func runOutdated() async -> [String] {
-        guard let brew = brewPath() else { return [] }
-        let raw = run(brew, ["outdated", "--quiet"])
-        return raw.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+    func runOutdated() async -> DiagnosticReport<[String]> {
+        guard let brew = brewPath() else { return .init(value: nil, issues: [.init(kind: .missingTool, source: "Homebrew")]) }
+        let result = command(brew, ["outdated", "--quiet"])
+        if let issue = result.issue(source: "Homebrew-Paketstand") { return .init(value: nil, issues: [issue]) }
+        let names = result.output.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+        let valid = names.allSatisfy { $0.range(of: "^[A-Za-z0-9@+._/-]+$", options: .regularExpression) != nil }
+        return valid ? .init(value: names) : .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Homebrew-Paketstand")])
     }
 
     /// Parse `brew doctor` text output into structured issues.
@@ -74,22 +90,9 @@ actor BrewDoctorReader {
 
     func cleanup() async -> Bool {
         guard let brew = brewPath() else { return false }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: brew)
-        p.arguments = ["cleanup"]
-        do { try p.run(); p.waitUntilExit(); return p.terminationStatus == 0 } catch { return false }
+        return CommandRunner.run(brew, ["cleanup"], timeout: 300).succeeded
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
@@ -99,19 +102,32 @@ final class BrewDoctorModel: ObservableObject {
     @Published var outdated: [String] = []
     @Published var isLoading = false
     @Published var lastAction: String?
+    @Published var diagnosticIssues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
+    @Published var isCleaning = false
+    @Published var outdatedKnown = false
     private let reader = BrewDoctorReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.brewPath = await reader.brewPath()
         async let i = reader.runDoctor()
         async let o = reader.runOutdated()
-        self.issues = await i
-        self.outdated = await o
+        let doctor = await i
+        let packages = await o
+        issues = doctor.value ?? []
+        outdated = packages.value ?? []
+        outdatedKnown = packages.isComplete
+        diagnosticIssues = DiagnosticReport(value: true, issues: doctor.issues + packages.issues).issues
+        lastChecked = max(doctor.timestamp, packages.timestamp)
     }
 
     func cleanup() async {
+        guard !isCleaning, !isLoading else { return }
+        isCleaning = true
+        defer { isCleaning = false }
         let ok = await reader.cleanup()
         lastAction = ok ? "brew cleanup ✓" : "cleanup fehlgeschlagen"
         await reload()
@@ -125,6 +141,7 @@ struct BrewDoctorView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.diagnosticIssues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -146,18 +163,21 @@ struct BrewDoctorView: View {
                 Button { Task { await model.cleanup() } } label: {
                     Label("brew cleanup", systemImage: "trash")
                 }
-                Button { Task { await model.reload() } } label: {
-                    Label("Reload", systemImage: "arrow.clockwise")
-                }
-                .disabled(model.isLoading)
+                .disabled(model.isLoading || model.isCleaning || !model.diagnosticIssues.isEmpty)
             }
+            Button { Task { await model.reload() } } label: {
+                Label("Reload", systemImage: "arrow.clockwise")
+            }
+            .disabled(model.isLoading || model.isCleaning)
         }
         .padding(20)
     }
 
     @ViewBuilder
     private var content: some View {
-        if model.brewPath == nil {
+        if model.isLoading && model.lastChecked == nil {
+            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if model.brewPath == nil {
             ContentUnavailableView("Homebrew nicht gefunden",
                                    systemImage: "mug.fill",
                                    description: Text("Erwartet unter /opt/homebrew/bin/brew oder /usr/local/bin/brew."))
@@ -165,7 +185,11 @@ struct BrewDoctorView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    statusCard
+                    if !model.diagnosticIssues.isEmpty {
+                        Text("Homebrew-Diagnose unvollständig").font(.headline)
+                    } else {
+                        statusCard
+                    }
                     if !model.issues.isEmpty {
                         issuesSection
                     }
@@ -192,7 +216,7 @@ struct BrewDoctorView: View {
                 Text(model.issues.isEmpty ? "Brew is healthy" : "\(model.issues.count) Hinweis\(model.issues.count == 1 ? "" : "e")")
                     .font(MD4.Typo.headline)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("\(model.outdated.count) Pakete outdated · \(model.brewPath ?? "—")")
+                Text(model.outdatedKnown ? "\(model.outdated.count) Pakete outdated · \(model.brewPath ?? "—")" : "Paketstand unbekannt")
                     .font(MD4.Typo.caption)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }

@@ -34,7 +34,11 @@ actor SystemCleanupScanner {
         var totalItems = 0
 
         for root in category.paths(home: home) {
-            let (bytes, items) = directorySize(at: root)
+            let exclusions = category == .userCaches
+                ? SystemCleanupCategory.allCases.filter { $0 != .userCaches }
+                    .flatMap { $0.paths(home: home) }
+                : []
+            let (bytes, items) = directorySize(at: root, excluding: exclusions)
             totalBytes += bytes
             totalItems += items
         }
@@ -43,7 +47,7 @@ actor SystemCleanupScanner {
 
     /// Recursive byte sum of a directory. Returns (0, 0) if path is missing.
     /// Skips symlinks to avoid loops + double-counting.
-    private nonisolated func directorySize(at url: URL) -> (Int64, Int) {
+    private nonisolated func directorySize(at url: URL, excluding exclusions: [URL]) -> (Int64, Int) {
         let fm = FileManager.default
         var isDir: ObjCBool = false
         guard fm.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
@@ -65,6 +69,10 @@ actor SystemCleanupScanner {
         var bytes: Int64 = 0
         var items = 0
         for case let fileURL as URL in enumerator {
+            if exclusions.contains(where: { fileURL.standardizedFileURL == $0.standardizedFileURL }) {
+                enumerator.skipDescendants()
+                continue
+            }
             guard let values = try? fileURL.resourceValues(forKeys: Set(keys)) else { continue }
             if values.isSymbolicLink == true { continue }
             if values.isRegularFile != true { continue }

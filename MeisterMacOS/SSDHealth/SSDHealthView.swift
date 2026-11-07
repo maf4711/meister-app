@@ -17,25 +17,40 @@ struct SSDInfo: Identifiable, Hashable {
 }
 
 actor SSDHealthReader {
-    func read() async -> [SSDInfo] {
-        // Get list of all whole-disk identifiers via diskutil list -plist
-        let listRaw = run("/usr/sbin/diskutil", ["list", "-plist", "physical"])
-        guard let listData = listRaw.data(using: .utf8),
-              let listAny = try? PropertyListSerialization.propertyList(from: listData, format: nil),
-              let listDict = listAny as? [String: Any],
-              let disks = listDict["AllDisksAndPartitions"] as? [[String: Any]] else { return [] }
-
-        return disks.compactMap { entry -> SSDInfo? in
-            guard let id = entry["DeviceIdentifier"] as? String else { return nil }
-            return inspect(devID: id)
-        }
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
     }
 
-    private nonisolated func inspect(devID: String) -> SSDInfo? {
-        let raw = run("/usr/sbin/diskutil", ["info", "-plist", devID])
+    func read() async -> DiagnosticReport<[SSDInfo]> {
+        let result = command("/usr/sbin/diskutil", ["list", "-plist", "physical"])
+        if let issue = result.issue(source: "Datenträgerliste") { return .init(value: nil, issues: [issue]) }
+        guard let listData = result.output.data(using: .utf8),
+              let listDict = (try? PropertyListSerialization.propertyList(from: listData, format: nil)) as? [String: Any],
+              let disks = listDict["AllDisksAndPartitions"] as? [[String: Any]] else {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Datenträgerliste")])
+        }
+        var values: [SSDInfo] = []
+        var issues: [DiagnosticIssue] = []
+        for entry in disks {
+            guard let id = entry["DeviceIdentifier"] as? String else {
+                issues.append(.init(kind: .invalidOutput, source: "Datenträgerliste")); continue
+            }
+            let result = command("/usr/sbin/diskutil", ["info", "-plist", id])
+            if let issue = result.issue(source: "Datenträgerdetails") { issues.append(issue); continue }
+            guard let value = inspect(devID: id, raw: result.output) else {
+                issues.append(.init(kind: .invalidOutput, source: "Datenträgerdetails")); continue
+            }
+            values.append(value)
+        }
+        return .init(value: values.isEmpty && !issues.isEmpty ? nil : values, issues: issues)
+    }
+
+    private nonisolated func inspect(devID: String, raw: String) -> SSDInfo? {
         guard let data = raw.data(using: .utf8),
               let any = try? PropertyListSerialization.propertyList(from: data, format: nil),
-              let d = any as? [String: Any] else { return nil }
+              let d = any as? [String: Any], d["DeviceIdentifier"] as? String == devID,
+              d["TotalSize"] is NSNumber else { return nil }
 
         let name = d["IORegistryEntryName"] as? String
                 ?? d["MediaName"] as? String
@@ -51,7 +66,7 @@ actor SSDHealthReader {
             switch smartRaw {
             case "Verified": return .verified
             case "Failing":  return .failing
-            case "Not Supported", "NotSupported": return .notSupported
+            case "Not Supported", "NotSupported", "Unsupported": return .notSupported
             default: return .unknown
             }
         }()
@@ -72,28 +87,24 @@ actor SSDHealthReader {
         )
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
 final class SSDHealthModel: ObservableObject {
     @Published var disks: [SSDInfo] = []
     @Published var isLoading = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     private let reader = SSDHealthReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.disks = await reader.read()
+        let report = await reader.read()
+        disks = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 }
 
@@ -104,6 +115,7 @@ struct SSDHealthView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -134,7 +146,7 @@ struct SSDHealthView: View {
         if model.isLoading && model.disks.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.disks.isEmpty {
-            ContentUnavailableView("Keine Disks gefunden",
+            ContentUnavailableView(model.issues.isEmpty ? "Keine Disks gefunden" : "Datenträger nicht vollständig ermittelbar",
                                    systemImage: "externaldrive.badge.questionmark")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

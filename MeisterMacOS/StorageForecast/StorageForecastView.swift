@@ -9,69 +9,48 @@ struct StorageForecast: Equatable {
     let daysUntilFull: Int?               // nil = not growing, or already full
 }
 
+struct StorageSample: Codable {
+    let date: Date
+    let total: Int64
+    let free: Int64
+}
+
 actor StorageForecastReader {
     private let home: URL
-    init(home: URL = FileManager.default.homeDirectoryForCurrentUser) {
-        self.home = home
-    }
+    init(home: URL = FileManager.default.homeDirectoryForCurrentUser) { self.home = home }
 
-    func compute() async -> StorageForecast {
-        let url = URL(fileURLWithPath: "/")
-        let keys: Set<URLResourceKey> = [
-            .volumeTotalCapacityKey,
-            .volumeAvailableCapacityForImportantUsageKey,
-        ]
-        let values = try? url.resourceValues(forKeys: keys)
-        let total = Int64(values?.volumeTotalCapacity ?? 0)
-        let free = values?.volumeAvailableCapacityForImportantUsage ?? 0
-
-        let history = readCleanupManifests()
-        let (growth, days) = estimateGrowth(history: history, currentFree: free)
-        let daysUntilFull: Int? = {
-            guard growth < 0 else { return nil }   // not growing or shrinking
-            return Int(Double(free) / Double(-growth))
-        }()
-
-        return StorageForecast(
-            totalBytes: total,
-            freeBytes: free,
-            cleanupHistoryDays: days,
-            avgGrowthBytesPerDay: growth,
-            daysUntilFull: daysUntilFull
-        )
-    }
-
-    /// Read cleanup manifests to find points where reclaimable bytes were
-    /// captured. Use the deltas between successive captures to project growth.
-    private nonisolated func readCleanupManifests() -> [(Date, Int64)] {
-        let dir = home.appendingPathComponent("Library/Application Support/Meister/cleanups", isDirectory: true)
-        guard let urls = try? FileManager.default.contentsOfDirectory(at: dir,
-                                                                       includingPropertiesForKeys: [.contentModificationDateKey]) else { return [] }
-        let items: [(Date, Int64)] = urls.compactMap { u -> (Date, Int64)? in
-            guard u.pathExtension == "json",
-                  let data = try? Data(contentsOf: u),
-                  let any = try? JSONSerialization.jsonObject(with: data),
-                  let dict = any as? [String: Any] else { return nil }
-            let bytes = (dict["totalReclaimedBytes"] as? Int64) ??
-                Int64((dict["totalReclaimedBytes"] as? NSNumber)?.int64Value ?? 0)
-            let mtime = (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
-            return (mtime, bytes)
+    func compute() async throws -> StorageForecast {
+        guard let disk = DiskCapacity.read() else {
+            throw CocoaError(.fileReadUnknown)
         }
-        return items.sorted { $0.0 < $1.0 }
+        let url = home.appendingPathComponent("Library/Application Support/Meister/storage-samples.json")
+        var samples: [StorageSample] = []
+        if FileManager.default.fileExists(atPath: url.path) {
+            samples = try JSONDecoder().decode([StorageSample].self, from: Data(contentsOf: url))
+        }
+        let now = Date()
+        samples = samples.filter { now.timeIntervalSince($0.date) <= 90 * 86_400 && $0.total == disk.total }
+        // Keep one observation per hour so frequent refreshes do not bias the trend.
+        if samples.last.map({ now.timeIntervalSince($0.date) >= 3600 }) ?? true {
+            samples.append(.init(date: now, total: disk.total, free: disk.available))
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(samples).write(to: url, options: .atomic)
+        }
+        return Self.forecast(samples: samples, disk: disk)
     }
 
-    /// Heuristic: average bytes-reclaimed-per-day over manifest history is a
-    /// proxy for daily junk accumulation. Negative growth = disk filling.
-    private nonisolated func estimateGrowth(history: [(Date, Int64)], currentFree: Int64) -> (Int64, Int) {
-        guard let first = history.first, let last = history.last, history.count >= 2 else {
-            return (0, 0)
+    nonisolated static func forecast(samples: [StorageSample], disk: DiskCapacity) -> StorageForecast {
+        let samples = samples.filter { $0.total == disk.total }.sorted { $0.date < $1.date }
+        let span = samples.first.flatMap { first in samples.last.map { $0.date.timeIntervalSince(first.date) } } ?? 0
+        let days = max(0, Int(span / 86_400))
+        var growth: Int64 = 0
+        // At least seven days and three observations before making a projection.
+        if days >= 7, samples.count >= 3, let first = samples.first, let last = samples.last {
+            growth = Int64(Double(last.free - first.free) / (span / 86_400))
         }
-        let span = max(1, Int(last.0.timeIntervalSince(first.0) / 86_400))
-        let totalReclaimed = history.reduce(Int64(0)) { $0 + $1.1 }
-        // If we reclaimed N bytes over D days, junk is accumulating at ~N/D per day.
-        // That means the disk is "growing" (free shrinking) at the same rate.
-        let growthPerDay = -totalReclaimed / Int64(span)
-        return (growthPerDay, span)
+        let daysUntilFull = growth < 0 ? Int(Double(disk.available) / Double(-growth)) : nil
+        return StorageForecast(totalBytes: disk.total, freeBytes: disk.available,
+                               cleanupHistoryDays: days, avgGrowthBytesPerDay: growth, daysUntilFull: daysUntilFull)
     }
 }
 
@@ -79,12 +58,16 @@ actor StorageForecastReader {
 final class StorageForecastModel: ObservableObject {
     @Published var forecast: StorageForecast?
     @Published var isLoading = false
+    @Published var error: String?
     private let reader = StorageForecastReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.forecast = await reader.compute()
+        error = nil
+        do { self.forecast = try await reader.compute() }
+        catch { self.error = error.localizedDescription }
     }
 }
 
@@ -107,7 +90,7 @@ struct StorageForecastView: View {
                 Text("Storage Forecast")
                     .font(MD4.Typo.title2)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("Wann ist die Disk voll? Schätzung aus Cleanup-Historie + aktuellem Freispeicher.")
+                Text("Trend aus gemessenen Speicherständen auf dem Datenvolume. Messung bei jedem Aufruf.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -122,14 +105,17 @@ struct StorageForecastView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let f = model.forecast {
+        if let error = model.error {
+            ContentUnavailableView("Messung fehlgeschlagen", systemImage: "exclamationmark.triangle",
+                                   description: Text(error))
+        } else if let f = model.forecast {
             ScrollView {
                 VStack(spacing: 16) {
                     headlineCard(f)
                     if f.cleanupHistoryDays < 7 {
                         ContentUnavailableView("Zu wenig Daten",
                                                systemImage: "chart.line.uptrend.xyaxis",
-                                               description: Text("Nur \(f.cleanupHistoryDays) Tag(e) Cleanup-Historie. Mindestens 7 Tage für eine sinnvolle Prognose."))
+                                               description: Text("Nur \(f.cleanupHistoryDays) Tag(e) Messhistorie. Mindestens 7 Tage und 3 Messungen für eine Prognose."))
                             .frame(maxWidth: .infinity, minHeight: 140)
                     } else {
                         statGrid(f)
@@ -163,7 +149,7 @@ struct StorageForecastView: View {
                 }
                 .padding(.top, 8)
             } else {
-                Text("Keine Wachstumsdaten — Cleanups halten den Speicherstand stabil.")
+                Text("Keine belastbare Vorhersage für einen vollen Datenträger.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.success)
                     .padding(.top, 4)
@@ -177,11 +163,11 @@ struct StorageForecastView: View {
 
     private func statGrid(_ f: StorageForecast) -> some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            tile("Cleanup-Historie",
+            tile("Messhistorie",
                  "\(f.cleanupHistoryDays) Tage",
                  "clock.arrow.2.circlepath")
-            tile("Wachstum / Tag",
-                 abs(f.avgGrowthBytesPerDay).humanBytes,
+            tile("Änderung Freispeicher / Tag",
+                 f.avgGrowthBytesPerDay.humanBytes,
                  "arrow.up.arrow.down")
         }
     }

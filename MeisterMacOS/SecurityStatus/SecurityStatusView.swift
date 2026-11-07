@@ -9,6 +9,7 @@ final class SecurityStatusModel: ObservableObject {
     private let reader = SecurityStatusReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.checks = await reader.readAll()

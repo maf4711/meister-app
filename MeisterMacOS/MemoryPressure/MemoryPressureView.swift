@@ -86,14 +86,7 @@ actor MemoryPressureReader {
     }
 
     private nonisolated func run(_ tool: String, _ args: [String] = []) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        CommandRunner.run(tool, args).output
     }
 }
 

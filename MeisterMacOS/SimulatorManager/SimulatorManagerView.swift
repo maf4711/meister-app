@@ -10,14 +10,24 @@ struct SimDevice: Identifiable, Hashable {
 }
 
 actor SimulatorManagerReader {
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
     /// `xcrun simctl list devices --json` returns `{ devices: { runtime: [device, ...] } }`.
-    func read() async -> [SimDevice] {
-        let raw = run("/usr/bin/xcrun", ["simctl", "list", "devices", "--json"])
+    func read() async -> DiagnosticReport<[SimDevice]> {
+        let result = command("/usr/bin/xcrun", ["simctl", "list", "devices", "--json"])
+        if let issue = result.issue(source: "Simulatoren") { return .init(value: nil, issues: [issue]) }
+        let raw = result.output
         guard let data = raw.data(using: .utf8),
               let any = try? JSONSerialization.jsonObject(with: data),
               let dict = any as? [String: Any],
-              let devices = dict["devices"] as? [String: [[String: Any]]] else { return [] }
+              let devices = dict["devices"] as? [String: [[String: Any]]] else {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Simulatoren")])
+        }
 
+        var issues: [DiagnosticIssue] = []
         var out: [SimDevice] = []
         for (runtimeKey, items) in devices {
             // runtimeKey looks like "com.apple.CoreSimulator.SimRuntime.iOS-17-5"
@@ -27,7 +37,7 @@ actor SimulatorManagerReader {
             for item in items {
                 guard let udid = item["udid"] as? String,
                       let name = item["name"] as? String,
-                      let state = item["state"] as? String else { continue }
+                      let state = item["state"] as? String else { issues.append(.init(kind: .invalidOutput, source: "Simulatoren")); continue }
                 let dataPath = item["dataPath"] as? String
                 let size: Int64? = dataPath.flatMap { directorySize(atPath: $0) }
                 out.append(SimDevice(
@@ -39,21 +49,17 @@ actor SimulatorManagerReader {
                 ))
             }
         }
-        return out.sorted { ($0.runtime, $0.name) > ($1.runtime, $1.name) }
+        return .init(value: out.isEmpty && !issues.isEmpty ? nil : out.sorted { ($0.runtime, $0.name) > ($1.runtime, $1.name) }, issues: issues)
     }
 
     func erase(udid: String) async -> Bool {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        p.arguments = ["simctl", "erase", udid]
-        do { try p.run(); p.waitUntilExit(); return p.terminationStatus == 0 } catch { return false }
+        guard UUID(uuidString: udid) != nil else { return false }
+        return CommandRunner.run("/usr/bin/xcrun", ["simctl", "erase", udid], timeout: 300).succeeded
     }
 
     func delete(udid: String) async -> Bool {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        p.arguments = ["simctl", "delete", udid]
-        do { try p.run(); p.waitUntilExit(); return p.terminationStatus == 0 } catch { return false }
+        guard UUID(uuidString: udid) != nil else { return false }
+        return CommandRunner.run("/usr/bin/xcrun", ["simctl", "delete", udid], timeout: 300).succeeded
     }
 
     private nonisolated func directorySize(atPath path: String) -> Int64? {
@@ -69,22 +75,14 @@ actor SimulatorManagerReader {
         return total
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
 final class SimulatorManagerModel: ObservableObject {
     @Published var devices: [SimDevice] = []
     @Published var isLoading = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var actionStatus: String?
     private let reader = SimulatorManagerReader()
 
@@ -93,9 +91,13 @@ final class SimulatorManagerModel: ObservableObject {
     }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.devices = await reader.read()
+        let report = await reader.read()
+        devices = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 
     func erase(_ d: SimDevice) async {
@@ -118,6 +120,7 @@ struct SimulatorManagerView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -153,6 +156,8 @@ struct SimulatorManagerView: View {
     private var content: some View {
         if model.isLoading && model.devices.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if model.devices.isEmpty && !model.issues.isEmpty {
+            ContentUnavailableView("Simulatoren nicht ermittelbar", systemImage: "iphone")
         } else if model.devices.isEmpty {
             ContentUnavailableView("Keine Simulatoren installiert",
                                    systemImage: "iphone.slash")

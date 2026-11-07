@@ -41,3 +41,7 @@ This file defines the required standards for working on this project.
 - Delete first.
 - Check existing CLAUDE.md files in sibling projects for patterns.
 - Run the multi-repo health report or repo-maintenance tools.
+
+## Gespeicherte Meister-Erkenntnisse
+
+Für macOS-Wartung, CLI-Integration und Tests gelten die bestätigten Erkenntnisse in [docs/knowledge/macos-maintenance-2026-09-23.md](docs/knowledge/macos-maintenance-2026-09-23.md). Insbesondere keine Hinweise oder automatischen Settings-Aufrufe wegen fehlender Time-Machine-Ziele wieder einführen.

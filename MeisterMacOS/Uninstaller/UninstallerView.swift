@@ -40,6 +40,7 @@ final class UninstallerModel: ObservableObject {
         let found = await Task.detached(priority: .userInitiated) {
             UninstallerScanner().leftovers(for: app)
         }.value
+        guard selectedApp?.id == app.id else { return }
         self.leftovers = found
         self.selectedLeftovers = Set(found.map(\.id))  // pre-select all
     }
@@ -53,13 +54,17 @@ final class UninstallerModel: ObservableObject {
     }
 
     func uninstall() async {
-        guard let app = selectedApp else { return }
+        guard let app = selectedApp, !isUninstalling, !isScanningLeftovers else { return }
         let chosen = leftovers.filter { selectedLeftovers.contains($0.id) }
+        errorMessage = nil
         isUninstalling = true
         defer { isUninstalling = false }
         do {
             let manifest = try await cleaner.uninstall(app, leftovers: chosen)
             self.lastManifest = manifest
+            let failures = manifest.entries.filter { $0.error != nil }
+            if !failures.isEmpty { errorMessage = "\(failures.count) Einträge konnten nicht entfernt werden." }
+            guard manifest.entries.first?.recycled == true else { return }
             // App is gone — refresh list and clear selection.
             await loadApps()
             self.selectedApp = nil

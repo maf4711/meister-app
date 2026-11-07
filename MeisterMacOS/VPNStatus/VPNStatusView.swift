@@ -11,27 +11,29 @@ struct VPNStatusInfo: Equatable {
 }
 
 actor VPNStatusReader {
-    func read() async -> VPNStatusInfo {
-        // scutil --nwi prints active network interfaces; VPN tunnels show as utun*/ipsec*/tap*
-        let nwi = run("/usr/sbin/scutil", ["--nwi"])
-        let primary = parsePrimaryInterface(nwi)
-        let isVPN = primary.map { isLikelyVPN(name: $0) } ?? false
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
 
-        // DNS servers
-        let dnsRaw = run("/usr/sbin/scutil", ["--dns"])
-        let dns = parseDNS(dnsRaw)
-
-        // External IP — best-effort, doesn't make a network call
-        let externalIP: String? = nil
-
-        return VPNStatusInfo(
-            isConnected: isVPN,
-            interfaceName: primary,
-            primaryService: parsePrimaryService(nwi),
-            dnsServers: Array(dns.prefix(5)),
-            externalIP: externalIP,
-            raw: nwi
-        )
+    func read() async -> DiagnosticReport<VPNStatusInfo> {
+        let network = command("/usr/sbin/scutil", ["--nwi"])
+        if let issue = network.issue(source: "Netzwerk-Tunnel") { return .init(value: nil, issues: [issue]) }
+        let nwi = network.output
+        guard nwi.contains("Network interfaces:") || nwi.contains("No network information") else {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Netzwerk-Tunnel")])
+        }
+        let dns = command("/usr/sbin/scutil", ["--dns"])
+        var issues = dns.issue(source: "DNS-Server").map { [$0] } ?? []
+        if dns.succeeded && !dns.output.contains("DNS configuration") {
+            issues.append(.init(kind: .invalidOutput, source: "DNS-Server"))
+        }
+        let interfaces = nwi.split(separator: "\n").filter { $0.contains("Network interfaces:") }
+            .flatMap { $0.split(separator: ":", maxSplits: 1).last?.split(whereSeparator: { $0.isWhitespace }).map(String.init) ?? [] }
+        let tunnel = interfaces.first { isLikelyVPN(name: $0) }
+        return .init(value: VPNStatusInfo(isConnected: tunnel != nil,
+            interfaceName: tunnel ?? parsePrimaryInterface(nwi), primaryService: parsePrimaryService(nwi),
+            dnsServers: dns.succeeded ? Array(parseDNS(dns.output).prefix(5)) : [], externalIP: nil, raw: nwi), issues: issues)
     }
 
     nonisolated func parsePrimaryInterface(_ raw: String) -> String? {
@@ -62,7 +64,7 @@ actor VPNStatusReader {
             let s = line.trimmingCharacters(in: .whitespaces)
             if s.hasPrefix("nameserver["), let r = s.range(of: ":") {
                 let v = s[r.upperBound...].trimmingCharacters(in: .whitespaces)
-                out.append(String(v))
+                if !v.isEmpty && !out.contains(String(v)) { out.append(String(v)) }
             }
         }
         return out
@@ -73,28 +75,24 @@ actor VPNStatusReader {
         return prefixes.contains { name.hasPrefix($0) }
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
 final class VPNStatusModel: ObservableObject {
     @Published var info: VPNStatusInfo?
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var isLoading = false
     private let reader = VPNStatusReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.info = await reader.read()
+        let report = await reader.read()
+        self.info = report.value
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 }
 
@@ -104,6 +102,7 @@ struct VPNStatusView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             Divider().background(MD4.SemColor.divider)
             content
         }
@@ -117,7 +116,7 @@ struct VPNStatusView: View {
                 Text("VPN Status")
                     .font(MD4.Typo.title2)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("scutil --nwi + --dns. Primärinterface, DNS-Server, Tunnel-Detection.")
+                Text("Lokale Tunnel-Erkennung. Kein Nachweis für VPN-Schutz oder vollständige Verkehrsweiterleitung.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -140,18 +139,20 @@ struct VPNStatusView: View {
                 }
                 .padding(20)
             }
-        } else {
+        } else if model.isLoading {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ContentUnavailableView("Netzwerkstatus nicht verfügbar", systemImage: "network")
         }
     }
 
     private func statusCard(_ i: VPNStatusInfo) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: i.isConnected ? "lock.shield.fill" : "lock.open")
-                .foregroundStyle(i.isConnected ? MD4.SemColor.success : MD4.SemColor.textSecondary)
+            Image(systemName: "network")
+                .foregroundStyle(MD4.SemColor.textSecondary)
                 .font(.title)
             VStack(alignment: .leading, spacing: 2) {
-                Text(i.isConnected ? "VPN aktiv" : "Kein VPN")
+                Text(i.isConnected ? "Tunnel erkannt" : "Kein Tunnel erkannt")
                     .font(MD4.Typo.title3)
                     .foregroundStyle(MD4.SemColor.textPrimary)
                 if let iface = i.interfaceName {

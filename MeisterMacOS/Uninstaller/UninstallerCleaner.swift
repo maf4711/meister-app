@@ -40,6 +40,15 @@ final class UninstallerCleaner {
         var entries: [UninstallManifest.Entry] = []
         var total: Int64 = 0
 
+        guard app.bundleURL.standardizedFileURL != Bundle.main.bundleURL.standardizedFileURL,
+              !NSWorkspace.shared.runningApplications.contains(where: { $0.bundleURL?.standardizedFileURL == app.bundleURL.standardizedFileURL }) else {
+            throw NSError(domain: "Meister.Uninstaller", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Die App muss vor der Deinstallation beendet werden."])
+        }
+        // Ensure the journal directory is writable before recycling anything.
+        let journal = home.appendingPathComponent("Library/Application Support/Meister/uninstalls")
+        try fileManager.createDirectory(at: journal, withIntermediateDirectories: true)
+
         // 1. The app bundle itself.
         let (bundleOK, bundleErr) = await recycle(app.bundleURL)
         if bundleOK { total += app.bundleSize }
@@ -51,6 +60,7 @@ final class UninstallerCleaner {
 
         // 2. Every selected leftover. Skip /Library/LaunchDaemons — needs admin.
         for item in leftovers {
+            guard bundleOK else { break }
             if item.source == .launchDaemons,
                item.url.path.hasPrefix("/Library/LaunchDaemons") {
                 entries.append(.init(source: item.source.rawValue,

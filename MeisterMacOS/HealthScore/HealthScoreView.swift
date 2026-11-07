@@ -8,6 +8,7 @@ final class HealthScoreModel: ObservableObject {
     private let reader = HealthScoreReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         self.snapshot = await reader.snapshot()
@@ -43,7 +44,7 @@ struct HealthScoreView: View {
                 Text("Health Score")
                     .font(MD4.Typo.title2)
                     .foregroundStyle(MD4.SemColor.textPrimary)
-                Text("Eine Zahl 0-100. Sicherheit, Backup, Cleanup-Druck, Snapshots zusammengezählt.")
+                Text("Sicherheit, verfügbarer Speicher und eingerichtete Backups. Unbekannte Werte werden ausgeschlossen.")
                     .font(MD4.Typo.small)
                     .foregroundStyle(MD4.SemColor.textSecondary)
             }
@@ -60,6 +61,8 @@ struct HealthScoreView: View {
     private var content: some View {
         if let snap = model.snapshot {
             VStack(spacing: 16) {
+                Text(!snap.hasMeasurements ? "Keine Messwerte verfügbar" : snap.hasUnknowns ? "Teilbewertung — Messwerte fehlen" : "Bewertung der gemessenen Signale")
+                    .foregroundStyle(.secondary)
                 scoreCircle(snap.score)
                     .padding(.top, 16)
                 signals(snap.signals)
@@ -99,7 +102,7 @@ struct HealthScoreView: View {
                             .foregroundStyle(MD4.SemColor.textSecondary)
                     }
                     Spacer()
-                    Text("\(sig.earned)/\(sig.weight)")
+                    Text(sig.weight == 0 ? "Unbekannt" : "\(sig.earned)/\(sig.weight)")
                         .font(MD4.Typo.tabular(MD4.Typo.body))
                         .foregroundStyle(sig.earned == sig.weight
                                          ? MD4.SemColor.success

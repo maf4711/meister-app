@@ -6,14 +6,20 @@ import MeradOSDesign4
 final class KeychainAuditModel: ObservableObject {
     @Published var summaries: [KeychainSummary] = []
     @Published var isLoading = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     private let reader = KeychainAuditReader()
 
     var totalItems: Int { summaries.reduce(0) { $0 + $1.totalItems } }
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.summaries = await reader.read()
+        let report = await reader.read()
+        summaries = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 }
 
@@ -24,6 +30,7 @@ struct KeychainAuditView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -54,6 +61,8 @@ struct KeychainAuditView: View {
         if model.isLoading && model.summaries.isEmpty {
             ProgressView("Reading keychains…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if model.summaries.isEmpty {
+            ContentUnavailableView(model.issues.isEmpty ? "Keine Schlüsselbunde gefunden" : "Schlüsselbund nicht ermittelbar", systemImage: "key")
         } else {
             ScrollView {
                 VStack(spacing: 16) {
@@ -104,7 +113,7 @@ struct KeychainAuditView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             HStack {
-                Text(s.sizeBytes.humanBytes)
+                Text(s.sizeBytes?.humanBytes ?? "Dateigröße nicht ermittelt")
                     .font(MD4.Typo.caption)
                     .foregroundStyle(MD4.SemColor.textSecondary)
                 if let m = s.lastModified {

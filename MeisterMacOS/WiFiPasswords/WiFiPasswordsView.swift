@@ -10,13 +10,41 @@ struct WiFiNetwork: Identifiable, Hashable {
 }
 
 actor WiFiPasswordsReader {
-    /// `networksetup -listpreferredwirelessnetworks Wi-Fi` lists all saved SSIDs.
-    func read() async -> [WiFiNetwork] {
-        let raw = run("/usr/sbin/networksetup", ["-listpreferredwirelessnetworks", "Wi-Fi"])
-        return parse(raw)
+    private let command: @Sendable (String, [String]) -> CommandRunner.Result
+    init(command: @escaping @Sendable (String, [String]) -> CommandRunner.Result = { CommandRunner.run($0, $1) }) {
+        self.command = command
+    }
+
+    func read() async -> DiagnosticReport<[WiFiNetwork]> {
+        let ports = command("/usr/sbin/networksetup", ["-listallhardwareports"])
+        if let issue = ports.issue(source: "WLAN-Hardware") { return .init(value: nil, issues: [issue]) }
+        guard let device = Self.wirelessDevice(in: ports.output) else {
+            if ports.output.contains("Hardware Port:") { return .init(value: nil, issues: [.init(kind: .unavailable, source: "WLAN-Hardware")]) }
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "WLAN-Hardware")])
+        }
+        let result = command("/usr/sbin/networksetup", ["-listpreferredwirelessnetworks", device])
+        if let issue = result.issue(source: "Gespeicherte WLANs") { return .init(value: nil, issues: [issue]) }
+        guard result.output.contains("Preferred networks on ") else {
+            return .init(value: nil, issues: [.init(kind: .invalidOutput, source: "Gespeicherte WLANs")])
+        }
+        return .init(value: parse(result.output))
+    }
+
+    nonisolated static func wirelessDevice(in output: String) -> String? {
+        var wireless = false
+        for line in output.split(separator: "\n") {
+            let value = line.trimmingCharacters(in: .whitespaces)
+            if value.hasPrefix("Hardware Port:") {
+                wireless = value.contains("Wi-Fi") || value.contains("AirPort")
+            } else if wireless && value.hasPrefix("Device:") {
+                return value.dropFirst("Device:".count).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return nil
     }
 
     nonisolated func parse(_ raw: String) -> [WiFiNetwork] {
+        guard raw.contains("Preferred networks on ") else { return [] }
         var out: [WiFiNetwork] = []
         for line in raw.split(separator: "\n") {
             let s = String(line)
@@ -36,30 +64,11 @@ actor WiFiPasswordsReader {
     /// Fetch password from the System keychain. Apple shows a sudo prompt
     /// for AirPort items by default; the user must approve once per query.
     func password(for ssid: String) async -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        p.arguments = ["find-generic-password", "-D", "AirPort network password",
-                       "-a", ssid, "-w"]
-        let pipe = Pipe()
-        let errPipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = errPipe
-        do { try p.run(); p.waitUntilExit() } catch { return nil }
-        guard p.terminationStatus == 0 else { return nil }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = CommandRunner.run("/usr/bin/security", ["find-generic-password", "-D", "AirPort network password", "-a", ssid, "-w"])
+        guard result.succeeded else { return nil }
+        return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private nonisolated func run(_ tool: String, _ args: [String]) -> String {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: tool)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        do { try p.run(); p.waitUntilExit() } catch { return "" }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    }
 }
 
 @MainActor
@@ -67,13 +76,20 @@ final class WiFiPasswordsModel: ObservableObject {
     @Published var networks: [WiFiNetwork] = []
     @Published var revealed: [String: String] = [:]   // ssid → password
     @Published var isLoading = false
+    @Published var issues: [DiagnosticIssue] = []
+    @Published var lastChecked: Date?
     @Published var lastError: String?
     private let reader = WiFiPasswordsReader()
 
     func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        self.networks = await reader.read()
+        revealed.removeAll()
+        let report = await reader.read()
+        networks = report.value ?? []
+        issues = report.issues
+        lastChecked = report.timestamp
     }
 
     func reveal(_ ssid: String) async {
@@ -98,6 +114,7 @@ struct WiFiPasswordsView: View {
         VStack(spacing: 0) {
             header
             Divider().background(MD4.SemColor.divider)
+            DiagnosticIssuesView(issues: model.issues, timestamp: model.lastChecked)
             content
         }
         .background(MD4.SemColor.background)
@@ -132,6 +149,8 @@ struct WiFiPasswordsView: View {
     private var content: some View {
         if model.isLoading && model.networks.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if !model.issues.isEmpty {
+            ContentUnavailableView("WLAN-Liste nicht ermittelbar", systemImage: "wifi.exclamationmark")
         } else if model.networks.isEmpty {
             ContentUnavailableView("Keine WLANs gespeichert",
                                    systemImage: "wifi.slash")
