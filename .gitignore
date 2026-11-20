@@ -33,3 +33,11 @@ __pycache__/
 
 # Git worktrees
 .worktrees/
+
+# Local Ruflo/agent state
+.claude-flow/
+.ruv-swarm/
+.swarm/
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db
